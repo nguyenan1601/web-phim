@@ -36,7 +36,6 @@ export default async function Home() {
           <div className="container relative mx-auto px-4 z-10 pt-16">
             <div className="max-w-3xl space-y-5">
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-xs font-semibold text-amber-400 mb-2 shadow-[0_0_15px_rgba(245,158,11,0.2)]">
-                <Sparkles className="w-3.5 h-3.5" />
                 <span>NỔI BẬT HÔM NAY</span>
               </div>
               

@@ -167,7 +167,10 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
         {/* Footer Hint */}
         <div className="px-5 py-3 border-t border-white/5 text-xs text-zinc-600 flex items-center justify-between">
           <span>Nhấn ESC để đóng</span>
-          <span className="text-amber-500/50">⌘K</span>
+          <span className="text-amber-500/50 flex items-center gap-1">
+            <Search className="w-3 h-3" />
+            Tìm kiếm
+          </span>
         </div>
       </div>
     </div>

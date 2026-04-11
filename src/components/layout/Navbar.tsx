@@ -209,9 +209,6 @@ export default function Navbar({ user }: { user: User | null }) {
             >
               <Search className="w-4 h-4" />
               <span className="hidden sm:inline">Tìm kiếm</span>
-              <kbd className="hidden lg:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-zinc-800 text-[10px] text-zinc-500 border border-zinc-700 font-mono">
-                ⌘K
-              </kbd>
             </button>
 
             {/* Auth Button / User Menu */}
