@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import VideoPlayer from "./VideoPlayer";
 import { updateHistoryAction } from "@/app/actions/history";
@@ -45,6 +45,19 @@ export default function WatchClient({
 
   const currentServer = episodes[Math.min(activeServer, episodes.length - 1)];
   const currentEp = currentServer.items.find((e) => e.slug === currentEpSlug) || currentServer.items[0];
+
+  // Save watch history immediately when user opens the watch page
+  useEffect(() => {
+    updateHistoryAction({
+      movie_slug: filmSlug,
+      movie_name: filmName,
+      movie_thumb: poster,
+      episode_slug: currentEpSlug,
+      episode_name: currentEp.name,
+      progress_seconds: initialTime || 0,
+      total_seconds: 0,
+    });
+  }, [filmSlug, currentEpSlug]);
 
   const handleProgress = async (progress: { playedSeconds: number; totalSeconds: number }) => {
     // Chỉ lưu nếu đã xem ít nhất 5 giây

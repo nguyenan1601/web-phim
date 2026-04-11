@@ -20,11 +20,15 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           >
             <Popcorn className="w-8 h-8 text-amber-400" />
             <span className="font-display">
-              NV.<span className="font-light">Movies</span>
+              Xem<span className="font-light">Phim</span>
             </span>
           </Link>
-          <h1 className="text-2xl font-display font-semibold text-white">Chào mừng trở lại</h1>
-          <p className="text-zinc-500 text-sm">Đăng nhập để lưu phim yêu thích và lịch sử xem</p>
+          <h1 className="text-2xl font-display font-semibold text-white">
+            Chào mừng trở lại
+          </h1>
+          <p className="text-zinc-500 text-sm">
+            Đăng nhập để lưu phim yêu thích và lịch sử xem
+          </p>
         </div>
 
         {/* Message Alert */}
@@ -37,10 +41,12 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         {/* Form Container */}
         <div className="bg-zinc-900/50 backdrop-blur-xl border border-white/5 p-8 rounded-3xl shadow-2xl relative overflow-hidden group">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-amber-500/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
-          
+
           <form className="space-y-5">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-zinc-400 ml-1">Email</label>
+              <label className="text-sm font-medium text-zinc-400 ml-1">
+                Email
+              </label>
               <div className="relative group/field">
                 <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within/field:text-amber-400 transition-colors" />
                 <input
@@ -54,7 +60,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-zinc-400 ml-1">Mật khẩu</label>
+              <label className="text-sm font-medium text-zinc-400 ml-1">
+                Mật khẩu
+              </label>
               <div className="relative group/field">
                 <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within/field:text-amber-400 transition-colors" />
                 <input
@@ -77,7 +85,10 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               <div className="text-center pt-2">
                 <p className="text-sm text-zinc-500">
                   Chưa có tài khoản?{" "}
-                  <Link href="/register" className="text-amber-400 hover:text-amber-300 font-medium transition-colors">
+                  <Link
+                    href="/register"
+                    className="text-amber-400 hover:text-amber-300 font-medium transition-colors"
+                  >
                     Đăng ký ngay
                   </Link>
                 </p>
@@ -89,7 +100,10 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         {/* Footer */}
         <p className="text-center text-xs text-zinc-600">
           XemPhim cam kết bảo mật thông tin của bạn. <br />
-          Trở về <Link href="/" className="text-zinc-400 hover:text-amber-400">Trang chủ</Link>
+          Trở về{" "}
+          <Link href="/" className="text-zinc-400 hover:text-amber-400">
+            Trang chủ
+          </Link>
         </p>
       </div>
     </div>
