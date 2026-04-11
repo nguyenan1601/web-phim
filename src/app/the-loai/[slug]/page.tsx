@@ -20,7 +20,7 @@ const THE_LOAI_TITLES: Record<string, string> = {
   "phieu-luu": "Phiêu Lưu",
   "gia-tuong": "Giả Tưởng",
   "kinh-di": "Kinh Dị",
-  "am-nhac": "Âm Nhạc",
+  "phim-nhac": "Âm Nhạc",
   "than-thoai": "Thần Thoại",
   "tai-lieu": "Tài Liệu",
   "gia-dinh": "Gia Đình",

@@ -20,7 +20,7 @@ const CATEGORIES = [
   { href: "/the-loai/gia-tuong", label: "Giả Tưởng" },
   { href: "/the-loai/lich-su", label: "Lịch Sử" },
   { href: "/the-loai/kinh-di", label: "Kinh Dị" },
-  { href: "/the-loai/am-nhac", label: "Nhạc" },
+  { href: "/the-loai/phim-nhac", label: "Nhạc" },
   { href: "/the-loai/bi-an", label: "Bí Ẩn" },
   { href: "/the-loai/lang-man", label: "Lãng Mạn" },
   { href: "/the-loai/khoa-hoc-vien-tuong", label: "Khoa Học Viễn Tưởng" },
