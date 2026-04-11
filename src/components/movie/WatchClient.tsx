@@ -78,10 +78,10 @@ export default function WatchClient({
     <div className="space-y-6">
       {/* Player */}
       <VideoPlayer 
-        src={m3u8} 
-        embedUrl={embedUrl || currentEp?.embed}
+        src={currentEp?.m3u8 || m3u8} 
+        embedUrl={currentEp?.embed || embedUrl}
         poster={poster} 
-        initialTime={initialTime}
+        initialTime={activeServer === currentServerIdx ? initialTime : 0}
         onProgress={handleProgress}
       />
 
