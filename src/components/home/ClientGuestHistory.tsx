@@ -20,7 +20,7 @@ export default function ClientGuestHistory() {
       <div className="flex items-center justify-between">
         <h2 className="text-2xl md:text-3xl font-display font-semibold text-white flex items-center gap-3">
           <HistoryIcon className="w-6 h-6 text-amber-500" />
-          Tiếp Tục Xem (Thiết Bị Này)
+          Tiếp Tục Xem
         </h2>
         <Link href="/lich-su" className="text-sm text-zinc-400 hover:text-amber-400 transition-colors">
           Xem lịch sử &rarr;
