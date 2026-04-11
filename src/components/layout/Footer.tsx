@@ -4,11 +4,11 @@ import { Popcorn } from "lucide-react";
 const GENRES = [
   { slug: "hanh-dong", name: "Hành Động" },
   { slug: "tinh-cam", name: "Tình Cảm" },
-  { slug: "hai-huoc", name: "Hài Hước" },
+  { slug: "phim-hai", name: "Hài Hước" },
   { slug: "kinh-di", name: "Kinh Dị" },
   { slug: "co-trang", name: "Cổ Trang" },
   { slug: "hoat-hinh", name: "Hoạt Hình" },
-  { slug: "vien-tuong", name: "Viễn Tưởng" },
+  { slug: "khoa-hoc-vien-tuong", name: "Viễn Tưởng" },
   { slug: "tam-ly", name: "Tâm Lý" },
 ];
 
