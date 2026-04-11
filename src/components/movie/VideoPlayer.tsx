@@ -18,16 +18,17 @@ export default function VideoPlayer({ src, embedUrl, poster, initialTime = 0, on
   const hlsRef = useRef<Hls | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [useEmbed, setUseEmbed] = useState(false);
+  // Use embed by default when available (HLS proxy is unreliable)
+  const [useEmbed, setUseEmbed] = useState(!!embedUrl);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const lastUpdateRef = useRef<number>(0);
   const isInitialTimeSet = useRef(false);
 
   useEffect(() => {
     isInitialTimeSet.current = false;
-    setUseEmbed(false);
+    setUseEmbed(!!embedUrl);
     setError(null);
-  }, [src]);
+  }, [src, embedUrl]);
 
   const setInitialTime = () => {
     const video = videoRef.current;
