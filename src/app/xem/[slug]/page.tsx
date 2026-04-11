@@ -85,6 +85,7 @@ export default async function WatchPage({ params, searchParams }: PageProps) {
         {/* Video Player — Client Component */}
         <WatchClient
           m3u8={currentEp.m3u8}
+          embedUrl={currentEp.embed}
           poster={film.poster_url}
           episodes={episodes}
           filmSlug={slug}

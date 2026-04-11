@@ -2,27 +2,31 @@
 
 import { useEffect, useRef, useState } from "react";
 import Hls from "hls.js";
-import { AlertTriangle, Loader2, Maximize, Minimize } from "lucide-react";
+import { AlertTriangle, Loader2, Maximize, Minimize, MonitorPlay } from "lucide-react";
 
 interface VideoPlayerProps {
   src: string;
+  embedUrl?: string;
   poster?: string;
   initialTime?: number;
   onProgress?: (progress: { playedSeconds: number; totalSeconds: number }) => void;
 }
 
-export default function VideoPlayer({ src, poster, initialTime = 0, onProgress }: VideoPlayerProps) {
+export default function VideoPlayer({ src, embedUrl, poster, initialTime = 0, onProgress }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const hlsRef = useRef<Hls | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [useEmbed, setUseEmbed] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const lastUpdateRef = useRef<number>(0);
   const isInitialTimeSet = useRef(false);
 
   useEffect(() => {
     isInitialTimeSet.current = false;
+    setUseEmbed(false);
+    setError(null);
   }, [src]);
 
   const setInitialTime = () => {
@@ -48,7 +52,23 @@ export default function VideoPlayer({ src, poster, initialTime = 0, onProgress }
     }
   };
 
+  // Switch to embed mode
+  const switchToEmbed = () => {
+    if (embedUrl) {
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
+      }
+      setUseEmbed(true);
+      setError(null);
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
+    // Skip HLS setup if using embed
+    if (useEmbed) return;
+
     const video = videoRef.current;
     if (!video || !src) return;
 
@@ -86,7 +106,7 @@ export default function VideoPlayer({ src, poster, initialTime = 0, onProgress }
 
       hls.on(Hls.Events.ERROR, (_event, data) => {
         if (data.fatal) {
-          if (recoveryCount < 3) {
+          if (recoveryCount < 2) {
             recoveryCount++;
             switch (data.type) {
               case Hls.ErrorTypes.NETWORK_ERROR:
@@ -98,16 +118,28 @@ export default function VideoPlayer({ src, poster, initialTime = 0, onProgress }
                 hls.recoverMediaError();
                 break;
               default:
-                console.error("HLS Fatal Error, cannot recover:", data);
-                setError("Không thể phát video này. Code: " + data.details);
-                setIsLoading(false);
+                // Auto-switch to embed if available
+                if (embedUrl) {
+                  console.warn("HLS Fatal Error, switching to embed player...");
+                  switchToEmbed();
+                } else {
+                  setError("Không thể phát video này. Code: " + data.details);
+                  setIsLoading(false);
+                }
                 break;
             }
           } else {
-            console.error("HLS Fatal Error - Max recovery tried:", data);
-            setError("Gặp sự cố khi tải video. Vui lòng thử lại sau hoặc đổi server.");
-            setIsLoading(false);
-            hls.destroy();
+            // Max recovery reached, auto-switch to embed
+            if (embedUrl) {
+              console.warn("HLS max recovery reached, switching to embed player...");
+              hls.destroy();
+              switchToEmbed();
+            } else {
+              console.error("HLS Fatal Error - Max recovery tried:", data);
+              setError("Gặp sự cố khi tải video. Vui lòng thử lại sau hoặc đổi server.");
+              setIsLoading(false);
+              hls.destroy();
+            }
           }
         }
       });
@@ -118,7 +150,6 @@ export default function VideoPlayer({ src, poster, initialTime = 0, onProgress }
     }
     // Native HLS support (Safari / iOS)
     else if (video.canPlayType("application/vnd.apple.mpegurl")) {
-      // Use proxied URL even for native Safari to avoid CORS issues with fragments
       video.src = proxiedUrl;
       video.addEventListener("loadedmetadata", () => {
         setIsLoading(false);
@@ -126,14 +157,23 @@ export default function VideoPlayer({ src, poster, initialTime = 0, onProgress }
         video.play().catch(() => {});
       });
       video.addEventListener("error", () => {
-        setError("Không thể tải video trên trình duyệt này.");
-        setIsLoading(false);
+        if (embedUrl) {
+          switchToEmbed();
+        } else {
+          setError("Không thể tải video trên trình duyệt này.");
+          setIsLoading(false);
+        }
       });
     } else {
-      setError("Trình duyệt không hỗ trợ phát video HLS.");
-      setIsLoading(false);
+      // No HLS support at all, try embed
+      if (embedUrl) {
+        switchToEmbed();
+      } else {
+        setError("Trình duyệt không hỗ trợ phát video HLS.");
+        setIsLoading(false);
+      }
     }
-  }, [src]);
+  }, [src, useEmbed]);
 
   const toggleFullscreen = () => {
     const container = containerRef.current;
@@ -154,6 +194,38 @@ export default function VideoPlayer({ src, poster, initialTime = 0, onProgress }
     return () => document.removeEventListener("fullscreenchange", handler);
   }, []);
 
+  // Embed mode: render iframe
+  if (useEmbed && embedUrl) {
+    return (
+      <div
+        ref={containerRef}
+        className="relative w-full aspect-video bg-black rounded-xl overflow-hidden border border-white/5 shadow-2xl shadow-black/50 group"
+      >
+        <iframe
+          src={embedUrl}
+          className="w-full h-full"
+          allowFullScreen
+          allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+          style={{ border: "none" }}
+        />
+
+        {/* Embed indicator */}
+        <div className="absolute top-3 left-3 px-3 py-1.5 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-400 text-xs font-medium flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity z-30">
+          <MonitorPlay className="w-3.5 h-3.5" />
+          Server Embed
+        </div>
+
+        {/* Custom Fullscreen Button */}
+        <button
+          onClick={toggleFullscreen}
+          className="absolute top-3 right-3 p-2 rounded-lg bg-black/50 backdrop-blur-sm text-white/70 hover:text-amber-400 opacity-0 group-hover:opacity-100 transition-all z-30"
+        >
+          {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div
       ref={containerRef}
@@ -172,9 +244,18 @@ export default function VideoPlayer({ src, poster, initialTime = 0, onProgress }
       {/* Error Overlay */}
       {error && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/90 z-20">
-          <div className="flex flex-col items-center gap-3 text-red-400 text-center px-6">
+          <div className="flex flex-col items-center gap-4 text-red-400 text-center px-6">
             <AlertTriangle className="w-10 h-10" />
             <span className="text-sm font-medium">{error}</span>
+            {embedUrl && (
+              <button
+                onClick={switchToEmbed}
+                className="px-5 py-2.5 bg-amber-500 text-black font-semibold rounded-xl hover:bg-amber-400 transition-all text-sm flex items-center gap-2"
+              >
+                <MonitorPlay className="w-4 h-4" />
+                Chuyển sang Server Embed
+              </button>
+            )}
           </div>
         </div>
       )}

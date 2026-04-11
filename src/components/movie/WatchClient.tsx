@@ -20,6 +20,7 @@ interface EpisodeServer {
 
 interface WatchClientProps {
   m3u8: string;
+  embedUrl?: string;
   poster: string;
   episodes: EpisodeServer[];
   filmSlug: string;
@@ -31,6 +32,7 @@ interface WatchClientProps {
 
 export default function WatchClient({
   m3u8,
+  embedUrl,
   poster,
   episodes,
   filmSlug,
@@ -64,6 +66,7 @@ export default function WatchClient({
       {/* Player */}
       <VideoPlayer 
         src={m3u8} 
+        embedUrl={embedUrl || currentEp?.embed}
         poster={poster} 
         initialTime={initialTime}
         onProgress={handleProgress}
