@@ -15,23 +15,6 @@ export default async function HistoryPage() {
   const supabase = createClient(cookieStore);
   const { data: { user } } = await supabase.auth.getUser();
 
-  if (!user) {
-    return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center p-4">
-        <History className="w-16 h-16 text-zinc-800 mb-4" />
-        <h1 className="text-2xl font-bold mb-2">Vui lòng đăng nhập</h1>
-        <p className="text-zinc-500 mb-8 max-w-md text-center">
-          Bạn cần đăng nhập để xem lịch sử phim đã xem của mình.
-        </p>
-        <Link
-          href="/login"
-          className="px-8 py-3 bg-amber-500 text-black font-semibold rounded-full hover:bg-amber-400 transition-all shadow-lg shadow-amber-500/20"
-        >
-          Đăng nhập ngay
-        </Link>
-      </div>
-    );
-  }
 
   const history = await getHistoryAction();
 

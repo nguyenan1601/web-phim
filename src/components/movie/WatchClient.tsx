@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import VideoPlayer from "./VideoPlayer";
 import { updateHistoryAction } from "@/app/actions/history";
+import { saveLocalHistory } from "@/lib/localHistory";
 import { Play, Server } from "lucide-react";
 
 interface Episode {
@@ -48,7 +49,7 @@ export default function WatchClient({
 
   // Save watch history immediately when user opens the watch page
   useEffect(() => {
-    updateHistoryAction({
+    const historyData = {
       movie_slug: filmSlug,
       movie_name: filmName,
       movie_thumb: poster,
@@ -56,14 +57,16 @@ export default function WatchClient({
       episode_name: currentEp.name,
       progress_seconds: initialTime || 0,
       total_seconds: 0,
-    });
+    };
+    updateHistoryAction(historyData);
+    saveLocalHistory(historyData);
   }, [filmSlug, currentEpSlug]);
 
   const handleProgress = async (progress: { playedSeconds: number; totalSeconds: number }) => {
     // Chỉ lưu nếu đã xem ít nhất 5 giây
     if (progress.playedSeconds < 5) return;
 
-    await updateHistoryAction({
+    const historyData = {
       movie_slug: filmSlug,
       movie_name: filmName,
       movie_thumb: poster,
@@ -71,8 +74,12 @@ export default function WatchClient({
       episode_name: currentEp.name,
       progress_seconds: progress.playedSeconds,
       total_seconds: progress.totalSeconds,
-    });
+    };
+
+    updateHistoryAction(historyData);
+    saveLocalHistory(historyData);
   };
+
 
   return (
     <div className="space-y-6">

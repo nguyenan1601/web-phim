@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import Link from "next/link";
 import { Play, Trash2, XCircle, ChevronRight, AlertCircle } from "lucide-react";
 import { deleteHistoryAction, clearAllHistoryAction } from "@/app/actions/history";
+import { getLocalHistory, removeLocalHistory, clearLocalHistory } from "@/lib/localHistory";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -20,21 +21,37 @@ interface HistoryItem {
 }
 
 export default function HistoryClient({ initialHistory }: { initialHistory: HistoryItem[] }) {
-  const [history, setHistory] = useState(initialHistory);
+  const [history, setHistory] = useState<HistoryItem[]>(initialHistory);
   const [isPending, startTransition] = useTransition();
+
+  // Đọc từ local storage nếu server rỗng
+  useEffect(() => {
+    if (initialHistory.length === 0) {
+      const local = getLocalHistory();
+      if (local.length > 0) {
+        setHistory(local as HistoryItem[]);
+      }
+    }
+  }, [initialHistory]);
 
   const handleDelete = async (slug: string, name: string) => {
     // Optimistic UI
     const prevHistory = [...history];
     setHistory(history.filter(item => item.movie_slug !== slug));
 
-    const result = await deleteHistoryAction(slug);
-    if (result.error) {
-      setHistory(prevHistory);
-      toast.error(result.error);
-    } else {
-      toast.info(`Đã xóa "${name}" khỏi lịch sử`);
+    // Xoá local storage
+    removeLocalHistory(slug);
+
+    // Xoá server
+    if (initialHistory.length > 0) {
+       const result = await deleteHistoryAction(slug);
+       if (result.error) {
+         setHistory(prevHistory);
+         toast.error(result.error);
+         return;
+       }
     }
+    toast.info(`Đã xóa "${name}" khỏi lịch sử`);
   };
 
   const handleClearAll = async () => {
@@ -43,13 +60,19 @@ export default function HistoryClient({ initialHistory }: { initialHistory: Hist
     const prevHistory = [...history];
     setHistory([]);
 
-    const result = await clearAllHistoryAction();
-    if (result.error) {
-      setHistory(prevHistory);
-      toast.error(result.error);
-    } else {
-      toast.success("Đã xóa sạch lịch sử xem phim");
+    // Xoá local storage
+    clearLocalHistory();
+
+    // Xoá server
+    if (initialHistory.length > 0) {
+       const result = await clearAllHistoryAction();
+       if (result.error) {
+         setHistory(prevHistory);
+         toast.error(result.error);
+         return;
+       }
     }
+    toast.success("Đã xóa sạch lịch sử xem phim");
   };
 
   if (history.length === 0) {

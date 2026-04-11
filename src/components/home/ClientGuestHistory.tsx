@@ -1,23 +1,26 @@
-import { getHistoryAction } from "@/app/actions/history";
+"use client";
+
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Play, History as HistoryIcon } from "lucide-react";
-import ClientGuestHistory from "./ClientGuestHistory";
+import { getLocalHistory, LocalHistoryItem } from "@/lib/localHistory";
 
-export default async function ContinueWatching() {
-  const history = await getHistoryAction();
-  if (!history || history.length === 0) {
-    return <ClientGuestHistory />;
-  }
+export default function ClientGuestHistory() {
+  const [history, setHistory] = useState<LocalHistoryItem[]>([]);
 
-  // Lấy tối đa 5 phim gần nhất
-  const recentHistory = history.slice(0, 5);
+  useEffect(() => {
+    // Chỉ chạy ở client side, lấy từ localStorage
+    setHistory(getLocalHistory().slice(0, 5));
+  }, []);
+
+  if (history.length === 0) return null;
 
   return (
     <div className="container mx-auto px-4 mt-8 md:mt-12 space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl md:text-3xl font-display font-semibold text-white flex items-center gap-3">
           <HistoryIcon className="w-6 h-6 text-amber-500" />
-          Tiếp Tục Xem
+          Tiếp Tục Xem (Thiết Bị Này)
         </h2>
         <Link href="/lich-su" className="text-sm text-zinc-400 hover:text-amber-400 transition-colors">
           Xem lịch sử &rarr;
@@ -25,7 +28,7 @@ export default async function ContinueWatching() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {recentHistory.map((item) => {
+        {history.map((item) => {
           const progress = item.total_seconds > 0
             ? Math.min(Math.round((item.progress_seconds / item.total_seconds) * 100), 100)
             : null;

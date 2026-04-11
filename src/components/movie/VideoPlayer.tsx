@@ -210,11 +210,7 @@ export default function VideoPlayer({ src, embedUrl, poster, initialTime = 0, on
           style={{ border: "none" }}
         />
 
-        {/* Embed indicator */}
-        <div className="absolute top-3 left-3 px-3 py-1.5 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-400 text-xs font-medium flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity z-30">
-          <MonitorPlay className="w-3.5 h-3.5" />
-          Server Embed
-        </div>
+        {/* Embed indicator (Removed) */}
 
         {/* Custom Fullscreen Button */}
         <button
