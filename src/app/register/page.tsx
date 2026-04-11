@@ -6,7 +6,9 @@ interface RegisterPageProps {
   searchParams: Promise<{ message?: string }>;
 }
 
-export default async function RegisterPage({ searchParams }: RegisterPageProps) {
+export default async function RegisterPage({
+  searchParams,
+}: RegisterPageProps) {
   const { message } = await searchParams;
 
   return (
@@ -20,11 +22,15 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
           >
             <Popcorn className="w-8 h-8 text-amber-400" />
             <span className="font-display">
-              NV.<span className="font-light">Movies</span>
+              Xem<span className="font-light">Phim</span>
             </span>
           </Link>
-          <h1 className="text-2xl font-display font-semibold text-white">Tạo tài khoản mới</h1>
-          <p className="text-zinc-500 text-sm">Tham gia cùng cộng đồng XemPhim ngay hôm nay</p>
+          <h1 className="text-2xl font-display font-semibold text-white">
+            Tạo tài khoản mới
+          </h1>
+          <p className="text-zinc-500 text-sm">
+            Tham gia cùng cộng đồng XemPhim ngay hôm nay
+          </p>
         </div>
 
         {/* Message Alert */}
@@ -37,11 +43,13 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
         {/* Form Container */}
         <div className="bg-zinc-900/50 backdrop-blur-xl border border-white/5 p-8 rounded-3xl shadow-2xl relative overflow-hidden group">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-amber-500/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
-          
+
           <form className="space-y-5">
             {/* Full Name */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-zinc-400 ml-1">Họ và tên</label>
+              <label className="text-sm font-medium text-zinc-400 ml-1">
+                Họ và tên
+              </label>
               <div className="relative group/field">
                 <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within/field:text-amber-400 transition-colors" />
                 <input
@@ -56,7 +64,9 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
 
             {/* Email */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-zinc-400 ml-1">Email</label>
+              <label className="text-sm font-medium text-zinc-400 ml-1">
+                Email
+              </label>
               <div className="relative group/field">
                 <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within/field:text-amber-400 transition-colors" />
                 <input
@@ -71,7 +81,9 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
 
             {/* Password */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-zinc-400 ml-1">Mật khẩu</label>
+              <label className="text-sm font-medium text-zinc-400 ml-1">
+                Mật khẩu
+              </label>
               <div className="relative group/field">
                 <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within/field:text-amber-400 transition-colors" />
                 <input
@@ -100,12 +112,15 @@ export default async function RegisterPage({ searchParams }: RegisterPageProps) 
         <div className="text-center space-y-4">
           <p className="text-sm text-zinc-500">
             Đã có tài khoản?{" "}
-            <Link href="/login" className="text-amber-400 hover:text-amber-300 font-medium transition-colors">
+            <Link
+              href="/login"
+              className="text-amber-400 hover:text-amber-300 font-medium transition-colors"
+            >
               Đăng nhập tại đây
             </Link>
           </p>
-          <Link 
-            href="/" 
+          <Link
+            href="/"
             className="inline-flex items-center gap-2 text-xs text-zinc-600 hover:text-zinc-400 transition-colors"
           >
             <ArrowLeft className="w-3 h-3" />
