@@ -24,10 +24,9 @@ export default async function ContinueWatching() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {recentHistory.map((item) => {
-          const progress = Math.min(
-            Math.round((item.progress_seconds / item.total_seconds) * 100),
-            100
-          );
+          const progress = item.total_seconds > 0
+            ? Math.min(Math.round((item.progress_seconds / item.total_seconds) * 100), 100)
+            : null;
 
           return (
             <Link
@@ -58,12 +57,14 @@ export default async function ContinueWatching() {
                 </div>
                 
                 {/* Progress Bar (Overlay on Thumb) */}
-                <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/10">
-                  <div 
-                    className="h-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)] transition-all duration-1000"
-                    style={{ width: `${progress}%` }}
-                  />
-                </div>
+                {progress !== null && (
+                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/10">
+                    <div 
+                      className="h-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)] transition-all duration-1000"
+                      style={{ width: `${progress}%` }}
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Info Container */}
@@ -75,7 +76,7 @@ export default async function ContinueWatching() {
                   Đang xem: <span className="text-zinc-300">Tập {item.episode_name || item.episode_slug.replace('tap-', '')}</span>
                 </p>
                 <p className="text-[10px] text-amber-500/70 mt-2 font-medium tracking-wider uppercase">
-                  {progress}% hoàn thành
+                  {progress !== null ? `${progress}% hoàn thành` : 'Đang xem'}
                 </p>
               </div>
             </Link>
