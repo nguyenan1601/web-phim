@@ -1,17 +1,60 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Play, History as HistoryIcon } from "lucide-react";
 import { getLocalHistory, LocalHistoryItem } from "@/lib/localHistory";
 
-export default function ClientGuestHistory() {
-  const [history, setHistory] = useState<LocalHistoryItem[]>([]);
+interface HistoryItem {
+  id: string;
+  movie_slug: string;
+  movie_name: string;
+  movie_thumb?: string;
+  episode_slug: string;
+  episode_name: string;
+  progress_seconds: number;
+  total_seconds: number;
+  updated_at?: string;
+}
+
+interface Props {
+  serverHistory?: HistoryItem[];
+}
+
+export default function ClientGuestHistory({ serverHistory = [] }: Props) {
+  const [history, setHistory] = useState<HistoryItem[]>(serverHistory.slice(0, 5));
+  const pathname = usePathname();
+
+  const refreshHistory = useCallback(() => {
+    // If server provided data (logged-in user), use that as primary source
+    // Otherwise fall back to localStorage
+    if (serverHistory.length > 0) {
+      setHistory(serverHistory.slice(0, 5));
+    } else {
+      const local = getLocalHistory();
+      setHistory(local.slice(0, 5) as HistoryItem[]);
+    }
+  }, [serverHistory]);
 
   useEffect(() => {
-    // Chỉ chạy ở client side, lấy từ localStorage
-    setHistory(getLocalHistory().slice(0, 5));
-  }, []);
+    // Read on mount and whenever user navigates back to this page
+    refreshHistory();
+
+    // Re-read when tab regains focus (covers: user deletes history on /lich-su then navigates back)
+    const handleFocus = () => refreshHistory();
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') refreshHistory();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [pathname, refreshHistory]);
 
   if (history.length === 0) return null;
 
