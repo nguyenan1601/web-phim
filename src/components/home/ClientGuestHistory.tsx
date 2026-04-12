@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Play, History as HistoryIcon } from "lucide-react";
-import { getLocalHistory, LocalHistoryItem } from "@/lib/localHistory";
+import { getLocalHistory, saveLocalHistory, LocalHistoryItem } from "@/lib/localHistory";
 
 interface HistoryItem {
   id: string;
@@ -24,24 +24,43 @@ interface Props {
 
 export default function ClientGuestHistory({ serverHistory = [] }: Props) {
   const [history, setHistory] = useState<HistoryItem[]>(serverHistory.slice(0, 5));
+  const [seeded, setSeeded] = useState(false);
   const pathname = usePathname();
 
-  const refreshHistory = useCallback(() => {
-    // If server provided data (logged-in user), use that as primary source
-    // Otherwise fall back to localStorage
-    if (serverHistory.length > 0) {
-      setHistory(serverHistory.slice(0, 5));
-    } else {
-      const local = getLocalHistory();
-      setHistory(local.slice(0, 5) as HistoryItem[]);
+  // Seed localStorage from server data if local is empty (new device for logged-in user)
+  useEffect(() => {
+    if (seeded) return;
+    const local = getLocalHistory();
+    if (local.length === 0 && serverHistory.length > 0) {
+      // First time on this device: copy server history to localStorage
+      serverHistory.forEach(item => {
+        saveLocalHistory({
+          movie_slug: item.movie_slug,
+          movie_name: item.movie_name,
+          movie_thumb: item.movie_thumb,
+          episode_slug: item.episode_slug,
+          episode_name: item.episode_name,
+          progress_seconds: item.progress_seconds,
+          total_seconds: item.total_seconds,
+        });
+      });
     }
-  }, [serverHistory]);
+    setSeeded(true);
+  }, [serverHistory, seeded]);
+
+  // Always read from localStorage - it's the single source of truth on this device
+  const refreshHistory = useCallback(() => {
+    const local = getLocalHistory();
+    setHistory(local.slice(0, 5) as HistoryItem[]);
+  }, []);
 
   useEffect(() => {
-    // Read on mount and whenever user navigates back to this page
-    refreshHistory();
+    // Read on mount (after seeding)
+    if (seeded) {
+      refreshHistory();
+    }
 
-    // Re-read when tab regains focus (covers: user deletes history on /lich-su then navigates back)
+    // Re-read when tab regains focus (covers: user deletes on /lich-su then navigates back)
     const handleFocus = () => refreshHistory();
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') refreshHistory();
@@ -54,7 +73,7 @@ export default function ClientGuestHistory({ serverHistory = [] }: Props) {
       window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, [pathname, refreshHistory]);
+  }, [pathname, refreshHistory, seeded]);
 
   if (history.length === 0) return null;
 
