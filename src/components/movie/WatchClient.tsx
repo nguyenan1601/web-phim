@@ -49,7 +49,7 @@ export default function WatchClient({
   const currentServer = episodes[Math.min(activeServer, episodes.length - 1)];
   const currentEp = currentServer.items.find((e) => e.slug === currentEpSlug) || currentServer.items[0];
 
-  // Save watch history when user opens the watch page
+  // Save watch history when user opens the watch page or episode changes
   useEffect(() => {
     const historyData = {
       movie_slug: filmSlug,
@@ -61,17 +61,17 @@ export default function WatchClient({
       total_seconds: 0,
     };
 
+    // Save to localStorage regardless of login status (as local cache)
+    saveLocalHistory(historyData);
+
     if (userId) {
-      // Logged-in user: save to DB only
+      // Logged-in user: also save to DB
       updateHistoryAction(historyData);
-    } else {
-      // Guest: save to localStorage only
-      saveLocalHistory(historyData);
     }
   }, [filmSlug, currentEpSlug]);
 
-  const handleProgress = async (progress: { playedSeconds: number; totalSeconds: number }) => {
-    if (progress.playedSeconds < 5) return;
+  const saveProgress = async (playedSeconds: number, totalSeconds: number) => {
+    if (playedSeconds < 5) return;
 
     const historyData = {
       movie_slug: filmSlug,
@@ -79,18 +79,52 @@ export default function WatchClient({
       movie_thumb: poster,
       episode_slug: currentEpSlug,
       episode_name: currentEp.name,
-      progress_seconds: progress.playedSeconds,
-      total_seconds: progress.totalSeconds,
+      progress_seconds: Math.floor(playedSeconds),
+      total_seconds: Math.floor(totalSeconds),
     };
 
+    // Always update local storage first (fast)
+    saveLocalHistory(historyData);
+
     if (userId) {
-      // Logged-in user: save to DB only
-      updateHistoryAction(historyData);
-    } else {
-      // Guest: save to localStorage only
-      saveLocalHistory(historyData);
+      // Then sync to DB
+      await updateHistoryAction(historyData);
     }
   };
+
+  const handleProgress = (progress: { playedSeconds: number; totalSeconds: number }) => {
+    saveProgress(progress.playedSeconds, progress.totalSeconds);
+  };
+
+  // Cố gắng lưu lần cuối khi đóng tab/chuyển trang
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      // Chúng ta không thể await trong beforeunload, 
+      // nhưng saveLocalHistory là đồng bộ nên sẽ chạy được.
+      // Database update có thể không kịp, nhưng updateHistoryAction dùng fetch/server action
+      // có cơ hội chạy nếu trình duyệt chưa đóng hẳn.
+      const video = document.querySelector('video');
+      if (video && video.currentTime > 5) {
+        const historyData = {
+          movie_slug: filmSlug,
+          movie_name: filmName,
+          movie_thumb: poster,
+          episode_slug: currentEpSlug,
+          episode_name: currentEp.name,
+          progress_seconds: Math.floor(video.currentTime),
+          total_seconds: Math.floor(video.duration || 0),
+        };
+        saveLocalHistory(historyData);
+        if (userId) {
+          // Gửi request ngầm, không await
+          updateHistoryAction(historyData);
+        }
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [filmSlug, currentEpSlug, userId]);
 
   return (
     <div className="space-y-6">

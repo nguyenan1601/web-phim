@@ -4,7 +4,7 @@ import { createClient } from '@/utils/supabase/server'
 import { cookies } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 
-export async function updateHistoryAction(data: {
+export interface HistoryItem {
   movie_slug: string
   movie_name: string
   movie_thumb?: string
@@ -12,15 +12,33 @@ export async function updateHistoryAction(data: {
   episode_name: string
   progress_seconds: number
   total_seconds: number
-}) {
+  updated_at?: string
+}
+
+export async function updateHistoryAction(data: HistoryItem) {
   const cookieStore = await cookies()
   const supabase = createClient(cookieStore)
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
 
-  // Use upsert or unique constraint logic
-  // The schema has unique(user_id, movie_slug)
+  // 1. Kiểm tra dữ liệu hiện tại để tránh ghi đè "thời gian = 0" 
+  // do lỗi load chậm trên thiết bị mới (mount overwrite)
+  if (data.progress_seconds === 0) {
+    const { data: existing } = await supabase
+      .from('watch_history')
+      .select('progress_seconds, episode_slug')
+      .eq('user_id', user.id)
+      .eq('movie_slug', data.movie_slug)
+      .maybeSingle()
+
+    // Nếu cùng tập và trong DB đã có progress > 0, không ghi đè bằng 0
+    if (existing && existing.episode_slug === data.episode_slug && (existing.progress_seconds || 0) > 0) {
+      return { success: true, message: 'Preserved existing progress' }
+    }
+  }
+
+  // 2. Thực hiện cập nhật
   const { error } = await supabase
     .from('watch_history')
     .upsert({
@@ -40,10 +58,48 @@ export async function updateHistoryAction(data: {
     return { error: error.message }
   }
 
-  // Clear cache for homepage and history page
   revalidatePath('/')
   revalidatePath('/lich-su')
 
+  return { success: true }
+}
+
+/**
+ * Đồng bộ hàng loạt từ localStorage lên Database khi người dùng đăng nhập
+ */
+export async function syncHistoryAction(items: HistoryItem[]) {
+  const cookieStore = await cookies()
+  const supabase = createClient(cookieStore)
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  if (!items || items.length === 0) return { success: true }
+
+  // Chuẩn bị dữ liệu để upsert
+  const syncData = items.map(item => ({
+    user_id: user.id,
+    movie_slug: item.movie_slug,
+    movie_name: item.movie_name,
+    movie_thumb: item.movie_thumb,
+    episode_slug: item.episode_slug,
+    episode_name: item.episode_name,
+    progress_seconds: item.progress_seconds,
+    total_seconds: item.total_seconds,
+    updated_at: item.updated_at || new Date().toISOString(),
+  }))
+
+  const { error } = await supabase
+    .from('watch_history')
+    .upsert(syncData, { onConflict: 'user_id,movie_slug' })
+
+  if (error) {
+    console.error('Error syncing history:', error)
+    return { error: error.message }
+  }
+
+  revalidatePath('/')
+  revalidatePath('/lich-su')
   return { success: true }
 }
 

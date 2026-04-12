@@ -67,6 +67,7 @@ import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 
 import Toaster from "@/components/ui/Toaster";
+import HistorySync from "@/components/history/HistorySync";
 
 export default async function RootLayout({
   children,
@@ -84,6 +85,7 @@ export default async function RootLayout({
     >
       <body className="min-h-screen flex flex-col font-sans bg-black text-white selection:bg-amber-500/30">
         <Navbar user={user} />
+        <HistorySync userId={user?.id} />
         <main className="flex-1 flex flex-col pt-16">{children}</main>
         <Footer />
         <Toaster />
