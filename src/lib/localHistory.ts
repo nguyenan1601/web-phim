@@ -1,7 +1,11 @@
-export const LOCAL_HISTORY_KEY = 'watch_history_local';
+const LOCAL_HISTORY_PREFIX = 'watch_history_';
+
+function getKey(userId?: string): string {
+  return LOCAL_HISTORY_PREFIX + (userId || 'guest');
+}
 
 export interface LocalHistoryItem {
-  id: string; // fallback or generated
+  id: string;
   movie_slug: string;
   movie_name: string;
   movie_thumb?: string;
@@ -12,10 +16,10 @@ export interface LocalHistoryItem {
   updated_at: string;
 }
 
-export function getLocalHistory(): LocalHistoryItem[] {
+export function getLocalHistory(userId?: string): LocalHistoryItem[] {
   if (typeof window === 'undefined') return [];
   try {
-    const data = localStorage.getItem(LOCAL_HISTORY_KEY);
+    const data = localStorage.getItem(getKey(userId));
     return data ? JSON.parse(data) : [];
   } catch (err) {
     console.error('Lỗi lấy lịch sử local:', err);
@@ -23,11 +27,10 @@ export function getLocalHistory(): LocalHistoryItem[] {
   }
 }
 
-export function saveLocalHistory(item: Omit<LocalHistoryItem, 'id' | 'updated_at'>) {
+export function saveLocalHistory(item: Omit<LocalHistoryItem, 'id' | 'updated_at'>, userId?: string) {
   if (typeof window === 'undefined') return;
   try {
-    let history = getLocalHistory();
-    // Tìm phim đã có trong lịch sử local không
+    let history = getLocalHistory(userId);
     const existingIndex = history.findIndex(h => h.movie_slug === item.movie_slug);
     
     const newItem: LocalHistoryItem = {
@@ -42,35 +45,33 @@ export function saveLocalHistory(item: Omit<LocalHistoryItem, 'id' | 'updated_at
       history.push(newItem);
     }
     
-    // Sort by updated_at descending
     history.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
     
-    // Giới hạn lịch sử local để không đầy dung lượng (ví dụ: 100 phim)
     if (history.length > 100) {
       history = history.slice(0, 100);
     }
 
-    localStorage.setItem(LOCAL_HISTORY_KEY, JSON.stringify(history));
+    localStorage.setItem(getKey(userId), JSON.stringify(history));
   } catch (err) {
     console.error('Lỗi khi lưu lịch sử local:', err);
   }
 }
 
-export function removeLocalHistory(movieSlug: string) {
+export function removeLocalHistory(movieSlug: string, userId?: string) {
   if (typeof window === 'undefined') return;
   try {
-    const history = getLocalHistory();
+    const history = getLocalHistory(userId);
     const newHistory = history.filter(h => h.movie_slug !== movieSlug);
-    localStorage.setItem(LOCAL_HISTORY_KEY, JSON.stringify(newHistory));
+    localStorage.setItem(getKey(userId), JSON.stringify(newHistory));
   } catch (err) {
     console.error('Lỗi khi xoá lịch sử local:', err);
   }
 }
 
-export function clearLocalHistory() {
+export function clearLocalHistory(userId?: string) {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.removeItem(LOCAL_HISTORY_KEY);
+    localStorage.removeItem(getKey(userId));
   } catch (err) {
     console.error('Lỗi khi làm sạch lịch sử local:', err);
   }

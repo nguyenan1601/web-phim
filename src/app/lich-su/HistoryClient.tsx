@@ -20,14 +20,14 @@ interface HistoryItem {
   updated_at: string;
 }
 
-export default function HistoryClient({ initialHistory }: { initialHistory: HistoryItem[] }) {
+export default function HistoryClient({ initialHistory, userId }: { initialHistory: HistoryItem[]; userId?: string }) {
   const [history, setHistory] = useState<HistoryItem[]>(initialHistory);
   const [isPending, startTransition] = useTransition();
 
   // Đọc từ local storage nếu server rỗng
   useEffect(() => {
     if (initialHistory.length === 0) {
-      const local = getLocalHistory();
+      const local = getLocalHistory(userId);
       if (local.length > 0) {
         setHistory(local as HistoryItem[]);
       }
@@ -40,7 +40,7 @@ export default function HistoryClient({ initialHistory }: { initialHistory: Hist
     setHistory(history.filter(item => item.movie_slug !== slug));
 
     // Xoá local storage
-    removeLocalHistory(slug);
+    removeLocalHistory(slug, userId);
 
     // Xoá server
     if (initialHistory.length > 0) {
@@ -61,7 +61,7 @@ export default function HistoryClient({ initialHistory }: { initialHistory: Hist
     setHistory([]);
 
     // Xoá local storage
-    clearLocalHistory();
+    clearLocalHistory(userId);
 
     // Xoá server
     if (initialHistory.length > 0) {

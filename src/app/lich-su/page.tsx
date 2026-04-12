@@ -34,7 +34,7 @@ export default async function HistoryPage() {
         </Link>
       </div>
 
-      <HistoryClient initialHistory={history} />
+      <HistoryClient initialHistory={history} userId={user?.id} />
     </div>
   );
 }

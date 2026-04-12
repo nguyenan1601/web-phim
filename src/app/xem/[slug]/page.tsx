@@ -93,6 +93,7 @@ export default async function WatchPage({ params, searchParams }: PageProps) {
           currentEpSlug={currentEp.slug}
           currentServerIdx={serverIdx}
           initialTime={savedProgress}
+          userId={user?.id}
         />
       </div>
     </div>

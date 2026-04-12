@@ -29,6 +29,7 @@ interface WatchClientProps {
   currentEpSlug: string;
   currentServerIdx: number;
   initialTime?: number;
+  userId?: string;
 }
 
 export default function WatchClient({
@@ -41,6 +42,7 @@ export default function WatchClient({
   currentEpSlug,
   currentServerIdx,
   initialTime = 0,
+  userId,
 }: WatchClientProps) {
   const [activeServer, setActiveServer] = useState(currentServerIdx);
 
@@ -59,7 +61,7 @@ export default function WatchClient({
       total_seconds: 0,
     };
     updateHistoryAction(historyData);
-    saveLocalHistory(historyData);
+    saveLocalHistory(historyData, userId);
   }, [filmSlug, currentEpSlug]);
 
   const handleProgress = async (progress: { playedSeconds: number; totalSeconds: number }) => {
@@ -77,7 +79,7 @@ export default function WatchClient({
     };
 
     updateHistoryAction(historyData);
-    saveLocalHistory(historyData);
+    saveLocalHistory(historyData, userId);
   };
 
 

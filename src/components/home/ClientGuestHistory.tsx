@@ -20,9 +20,10 @@ interface HistoryItem {
 
 interface Props {
   serverHistory?: HistoryItem[];
+  userId?: string;
 }
 
-export default function ClientGuestHistory({ serverHistory = [] }: Props) {
+export default function ClientGuestHistory({ serverHistory = [], userId }: Props) {
   const [history, setHistory] = useState<HistoryItem[]>(serverHistory.slice(0, 5));
   const [seeded, setSeeded] = useState(false);
   const pathname = usePathname();
@@ -30,7 +31,7 @@ export default function ClientGuestHistory({ serverHistory = [] }: Props) {
   // Seed localStorage from server data if local is empty (new device for logged-in user)
   useEffect(() => {
     if (seeded) return;
-    const local = getLocalHistory();
+    const local = getLocalHistory(userId);
     if (local.length === 0 && serverHistory.length > 0) {
       // First time on this device: copy server history to localStorage
       serverHistory.forEach(item => {
@@ -42,17 +43,17 @@ export default function ClientGuestHistory({ serverHistory = [] }: Props) {
           episode_name: item.episode_name,
           progress_seconds: item.progress_seconds,
           total_seconds: item.total_seconds,
-        });
+        }, userId);
       });
     }
     setSeeded(true);
-  }, [serverHistory, seeded]);
+  }, [serverHistory, seeded, userId]);
 
   // Always read from localStorage - it's the single source of truth on this device
   const refreshHistory = useCallback(() => {
-    const local = getLocalHistory();
+    const local = getLocalHistory(userId);
     setHistory(local.slice(0, 5) as HistoryItem[]);
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     // Read on mount (after seeding)
