@@ -79,6 +79,7 @@ export async function deleteHistoryAction(movieSlug: string) {
 
   if (error) return { error: error.message }
   revalidatePath('/lich-su')
+  revalidatePath('/')
   return { success: true }
 }
 
@@ -96,5 +97,6 @@ export async function clearAllHistoryAction() {
   
     if (error) return { error: error.message }
     revalidatePath('/lich-su')
+    revalidatePath('/')
     return { success: true }
   }
