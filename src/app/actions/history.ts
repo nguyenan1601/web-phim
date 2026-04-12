@@ -40,6 +40,10 @@ export async function updateHistoryAction(data: {
     return { error: error.message }
   }
 
+  // Clear cache for homepage and history page
+  revalidatePath('/')
+  revalidatePath('/lich-su')
+
   return { success: true }
 }
 
