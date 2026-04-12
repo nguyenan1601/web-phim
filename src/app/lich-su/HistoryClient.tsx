@@ -29,7 +29,9 @@ export default function HistoryClient({ initialHistory, userId }: { initialHisto
     if (!userId && initialHistory.length === 0) {
       const local = getLocalHistory();
       if (local.length > 0) {
-        setHistory(local as HistoryItem[]);
+        startTransition(() => {
+          setHistory(local as HistoryItem[]);
+        });
       }
     }
   }, [initialHistory, userId]);
