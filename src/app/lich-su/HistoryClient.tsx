@@ -24,32 +24,31 @@ export default function HistoryClient({ initialHistory, userId }: { initialHisto
   const [history, setHistory] = useState<HistoryItem[]>(initialHistory);
   const [isPending, startTransition] = useTransition();
 
-  // Đọc từ local storage nếu server rỗng
+  // Guest: load from localStorage if server returned empty
   useEffect(() => {
-    if (initialHistory.length === 0) {
-      const local = getLocalHistory(userId);
+    if (!userId && initialHistory.length === 0) {
+      const local = getLocalHistory();
       if (local.length > 0) {
         setHistory(local as HistoryItem[]);
       }
     }
-  }, [initialHistory]);
+  }, [initialHistory, userId]);
 
   const handleDelete = async (slug: string, name: string) => {
-    // Optimistic UI
     const prevHistory = [...history];
     setHistory(history.filter(item => item.movie_slug !== slug));
 
-    // Xoá local storage
-    removeLocalHistory(slug, userId);
-
-    // Xoá server
-    if (initialHistory.length > 0) {
-       const result = await deleteHistoryAction(slug);
-       if (result.error) {
-         setHistory(prevHistory);
-         toast.error(result.error);
-         return;
-       }
+    if (userId) {
+      // Logged-in user: delete from DB
+      const result = await deleteHistoryAction(slug);
+      if (result.error) {
+        setHistory(prevHistory);
+        toast.error(result.error);
+        return;
+      }
+    } else {
+      // Guest: delete from localStorage
+      removeLocalHistory(slug);
     }
     toast.info(`Đã xóa "${name}" khỏi lịch sử`);
   };
@@ -60,17 +59,17 @@ export default function HistoryClient({ initialHistory, userId }: { initialHisto
     const prevHistory = [...history];
     setHistory([]);
 
-    // Xoá local storage
-    clearLocalHistory(userId);
-
-    // Xoá server
-    if (initialHistory.length > 0) {
-       const result = await clearAllHistoryAction();
-       if (result.error) {
-         setHistory(prevHistory);
-         toast.error(result.error);
-         return;
-       }
+    if (userId) {
+      // Logged-in user: clear from DB
+      const result = await clearAllHistoryAction();
+      if (result.error) {
+        setHistory(prevHistory);
+        toast.error(result.error);
+        return;
+      }
+    } else {
+      // Guest: clear localStorage
+      clearLocalHistory();
     }
     toast.success("Đã xóa sạch lịch sử xem phim");
   };
@@ -105,7 +104,9 @@ export default function HistoryClient({ initialHistory, userId }: { initialHisto
       <div className="grid gap-4">
         <AnimatePresence mode="popLayout">
           {history.map((item) => {
-            const progress = (item.progress_seconds / item.total_seconds) * 100;
+            const progress = item.total_seconds > 0
+              ? Math.min((item.progress_seconds / item.total_seconds) * 100, 100)
+              : 0;
             const isFinished = progress > 95;
 
             return (
@@ -116,10 +117,10 @@ export default function HistoryClient({ initialHistory, userId }: { initialHisto
                 animate={{ opacity: 1, y: 0 }}
                 className="group relative bg-zinc-900/40 border border-white/5 hover:border-white/10 p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center gap-5 transition-all hover:bg-zinc-900/60"
               >
-                {/* Thumbnail Display */}
+                {/* Thumbnail */}
                 <div className="relative flex-shrink-0 w-full sm:w-40 aspect-video rounded-xl overflow-hidden bg-zinc-800 shadow-lg group-hover:shadow-amber-500/10 transition-all">
                   {item.movie_thumb ? (
-                     // eslint-disable-next-line @next/next/no-img-element
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img 
                       src={item.movie_thumb} 
                       alt={item.movie_name} 
@@ -130,13 +131,11 @@ export default function HistoryClient({ initialHistory, userId }: { initialHisto
                       <Play className="w-10 h-10 text-zinc-700" />
                     </div>
                   )}
-                  {/* Play Overlay */}
                   <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                     <div className="w-10 h-10 rounded-full bg-amber-500 flex items-center justify-center text-black">
                       <Play className="w-5 h-5 fill-current" />
                     </div>
                   </div>
-                  {/* Progress Line (mini) */}
                   <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/10">
                     <div 
                       className="h-full bg-amber-500"
@@ -145,7 +144,7 @@ export default function HistoryClient({ initialHistory, userId }: { initialHisto
                   </div>
                 </div>
 
-                {/* Info Container */}
+                {/* Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <h3 className="text-lg font-semibold text-white truncate">
@@ -159,8 +158,10 @@ export default function HistoryClient({ initialHistory, userId }: { initialHisto
                     <span>Cập nhật: {new Date(item.updated_at).toLocaleDateString('vi-VN')}</span>
                     {isFinished ? (
                         <span className="text-green-500 font-medium">Đã xem hết</span>
-                    ) : (
+                    ) : item.total_seconds > 0 ? (
                         <span>Tiến độ: {Math.floor(item.progress_seconds / 60)} phút</span>
+                    ) : (
+                        <span>Đang xem</span>
                     )}
                   </div>
 

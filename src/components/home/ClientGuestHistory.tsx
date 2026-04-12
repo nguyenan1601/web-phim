@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Play, History as HistoryIcon } from "lucide-react";
-import { getLocalHistory, saveLocalHistory, LocalHistoryItem } from "@/lib/localHistory";
+import { getLocalHistory } from "@/lib/localHistory";
+import { getHistoryAction } from "@/app/actions/history";
 
 interface HistoryItem {
   id: string;
@@ -25,43 +26,25 @@ interface Props {
 
 export default function ClientGuestHistory({ serverHistory = [], userId }: Props) {
   const [history, setHistory] = useState<HistoryItem[]>(serverHistory.slice(0, 5));
-  const [seeded, setSeeded] = useState(false);
   const pathname = usePathname();
 
-  // Seed localStorage from server data if local is empty (new device for logged-in user)
-  useEffect(() => {
-    if (seeded) return;
-    const local = getLocalHistory(userId);
-    if (local.length === 0 && serverHistory.length > 0) {
-      // First time on this device: copy server history to localStorage
-      serverHistory.forEach(item => {
-        saveLocalHistory({
-          movie_slug: item.movie_slug,
-          movie_name: item.movie_name,
-          movie_thumb: item.movie_thumb,
-          episode_slug: item.episode_slug,
-          episode_name: item.episode_name,
-          progress_seconds: item.progress_seconds,
-          total_seconds: item.total_seconds,
-        }, userId);
-      });
+  const refreshHistory = useCallback(async () => {
+    if (userId) {
+      // Logged-in user: always fetch fresh data from DB via server action
+      const freshData = await getHistoryAction();
+      setHistory((freshData || []).slice(0, 5));
+    } else {
+      // Guest: read from localStorage
+      const local = getLocalHistory();
+      setHistory(local.slice(0, 5) as HistoryItem[]);
     }
-    setSeeded(true);
-  }, [serverHistory, seeded, userId]);
-
-  // Always read from localStorage - it's the single source of truth on this device
-  const refreshHistory = useCallback(() => {
-    const local = getLocalHistory(userId);
-    setHistory(local.slice(0, 5) as HistoryItem[]);
   }, [userId]);
 
   useEffect(() => {
-    // Read on mount (after seeding)
-    if (seeded) {
-      refreshHistory();
-    }
+    // Fetch fresh data on mount
+    refreshHistory();
 
-    // Re-read when tab regains focus (covers: user deletes on /lich-su then navigates back)
+    // Re-fetch when tab regains focus (covers: delete on /lich-su then navigate back)
     const handleFocus = () => refreshHistory();
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') refreshHistory();
@@ -74,7 +57,7 @@ export default function ClientGuestHistory({ serverHistory = [], userId }: Props
       window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, [pathname, refreshHistory, seeded]);
+  }, [pathname, refreshHistory]);
 
   if (history.length === 0) return null;
 
@@ -98,11 +81,11 @@ export default function ClientGuestHistory({ serverHistory = [], userId }: Props
 
           return (
             <Link
-              key={item.id}
+              key={item.id || item.movie_slug}
               href={`/xem/${item.movie_slug}?tap=${item.episode_slug}`}
               className="group relative flex gap-4 p-3 rounded-2xl bg-zinc-900/50 border border-white/5 hover:border-amber-500/30 hover:bg-zinc-900 transition-all overflow-hidden"
             >
-              {/* Thumbnail Container */}
+              {/* Thumbnail */}
               <div className="relative flex-shrink-0 w-32 aspect-video rounded-lg overflow-hidden bg-zinc-800">
                 {item.movie_thumb ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -112,30 +95,28 @@ export default function ClientGuestHistory({ serverHistory = [], userId }: Props
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 opacity-80 group-hover:opacity-100"
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-zinc-800 group-hover:scale-110 transition-transform duration-500">
-                    <Play className="w-8 h-8 text-amber-500 opacity-50 group-hover:opacity-100 transition-opacity" />
+                  <div className="w-full h-full flex items-center justify-center">
+                    <Play className="w-8 h-8 text-amber-500 opacity-50" />
                   </div>
                 )}
                 
-                {/* Play Button Overlay */}
                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
                    <div className="w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center text-black shadow-lg">
                       <Play className="w-4 h-4 fill-current" />
                    </div>
                 </div>
                 
-                {/* Progress Bar (Overlay on Thumb) */}
                 {progress !== null && (
                   <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/10">
                     <div 
-                      className="h-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)] transition-all duration-1000"
+                      className="h-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]"
                       style={{ width: `${progress}%` }}
                     />
                   </div>
                 )}
               </div>
 
-              {/* Info Container */}
+              {/* Info */}
               <div className="flex-1 min-w-0 flex flex-col justify-center py-1">
                 <h3 className="text-white font-bold truncate group-hover:text-amber-400 transition-colors">
                   {item.movie_name}

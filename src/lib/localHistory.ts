@@ -1,8 +1,4 @@
-const LOCAL_HISTORY_PREFIX = 'watch_history_';
-
-function getKey(userId?: string): string {
-  return LOCAL_HISTORY_PREFIX + (userId || 'guest');
-}
+const LOCAL_HISTORY_KEY = 'watch_history_local';
 
 export interface LocalHistoryItem {
   id: string;
@@ -16,21 +12,20 @@ export interface LocalHistoryItem {
   updated_at: string;
 }
 
-export function getLocalHistory(userId?: string): LocalHistoryItem[] {
+export function getLocalHistory(): LocalHistoryItem[] {
   if (typeof window === 'undefined') return [];
   try {
-    const data = localStorage.getItem(getKey(userId));
+    const data = localStorage.getItem(LOCAL_HISTORY_KEY);
     return data ? JSON.parse(data) : [];
-  } catch (err) {
-    console.error('Lỗi lấy lịch sử local:', err);
+  } catch {
     return [];
   }
 }
 
-export function saveLocalHistory(item: Omit<LocalHistoryItem, 'id' | 'updated_at'>, userId?: string) {
+export function saveLocalHistory(item: Omit<LocalHistoryItem, 'id' | 'updated_at'>) {
   if (typeof window === 'undefined') return;
   try {
-    let history = getLocalHistory(userId);
+    let history = getLocalHistory();
     const existingIndex = history.findIndex(h => h.movie_slug === item.movie_slug);
     
     const newItem: LocalHistoryItem = {
@@ -46,33 +41,30 @@ export function saveLocalHistory(item: Omit<LocalHistoryItem, 'id' | 'updated_at
     }
     
     history.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
-    
-    if (history.length > 100) {
-      history = history.slice(0, 100);
-    }
+    if (history.length > 100) history = history.slice(0, 100);
 
-    localStorage.setItem(getKey(userId), JSON.stringify(history));
+    localStorage.setItem(LOCAL_HISTORY_KEY, JSON.stringify(history));
   } catch (err) {
-    console.error('Lỗi khi lưu lịch sử local:', err);
+    console.error('Error saving local history:', err);
   }
 }
 
-export function removeLocalHistory(movieSlug: string, userId?: string) {
+export function removeLocalHistory(movieSlug: string) {
   if (typeof window === 'undefined') return;
   try {
-    const history = getLocalHistory(userId);
-    const newHistory = history.filter(h => h.movie_slug !== movieSlug);
-    localStorage.setItem(getKey(userId), JSON.stringify(newHistory));
+    const history = getLocalHistory();
+    const filtered = history.filter(h => h.movie_slug !== movieSlug);
+    localStorage.setItem(LOCAL_HISTORY_KEY, JSON.stringify(filtered));
   } catch (err) {
-    console.error('Lỗi khi xoá lịch sử local:', err);
+    console.error('Error removing local history:', err);
   }
 }
 
-export function clearLocalHistory(userId?: string) {
+export function clearLocalHistory() {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.removeItem(getKey(userId));
+    localStorage.removeItem(LOCAL_HISTORY_KEY);
   } catch (err) {
-    console.error('Lỗi khi làm sạch lịch sử local:', err);
+    console.error('Error clearing local history:', err);
   }
 }

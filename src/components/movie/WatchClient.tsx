@@ -49,7 +49,7 @@ export default function WatchClient({
   const currentServer = episodes[Math.min(activeServer, episodes.length - 1)];
   const currentEp = currentServer.items.find((e) => e.slug === currentEpSlug) || currentServer.items[0];
 
-  // Save watch history immediately when user opens the watch page
+  // Save watch history when user opens the watch page
   useEffect(() => {
     const historyData = {
       movie_slug: filmSlug,
@@ -60,12 +60,17 @@ export default function WatchClient({
       progress_seconds: initialTime || 0,
       total_seconds: 0,
     };
-    updateHistoryAction(historyData);
-    saveLocalHistory(historyData, userId);
+
+    if (userId) {
+      // Logged-in user: save to DB only
+      updateHistoryAction(historyData);
+    } else {
+      // Guest: save to localStorage only
+      saveLocalHistory(historyData);
+    }
   }, [filmSlug, currentEpSlug]);
 
   const handleProgress = async (progress: { playedSeconds: number; totalSeconds: number }) => {
-    // Chỉ lưu nếu đã xem ít nhất 5 giây
     if (progress.playedSeconds < 5) return;
 
     const historyData = {
@@ -78,10 +83,14 @@ export default function WatchClient({
       total_seconds: progress.totalSeconds,
     };
 
-    updateHistoryAction(historyData);
-    saveLocalHistory(historyData, userId);
+    if (userId) {
+      // Logged-in user: save to DB only
+      updateHistoryAction(historyData);
+    } else {
+      // Guest: save to localStorage only
+      saveLocalHistory(historyData);
+    }
   };
-
 
   return (
     <div className="space-y-6">
