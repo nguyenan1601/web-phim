@@ -84,14 +84,14 @@ export default async function ProfilePage() {
               <ProfileForm profile={profile} email={user.email || ""} />
             </div>
 
-            <div className="bg-amber-500/5 border border-amber-500/10 rounded-3xl p-8">
+            {/* <div className="bg-amber-500/5 border border-amber-500/10 rounded-3xl p-8">
               <h3 className="text-lg font-bold text-amber-500 mb-2">Ghi chú</h3>
               <p className="text-sm text-zinc-400 leading-relaxed">
                 Tên đầy đủ của bạn sẽ được hiển thị trên hệ thống. 
                 Sắp tới, chúng tôi sẽ cập nhật thêm tính năng thay đổi Avatar và Bình luận phim. 
                 Hãy chú ý theo dõi nhé!
               </p>
-            </div>
+            </div> */}
           </div>
         </div>
       </div>
