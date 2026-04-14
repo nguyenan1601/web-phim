@@ -1,7 +1,8 @@
+import Link from "next/link";
 import { Film, Search } from "lucide-react";
 import MovieCard from "@/components/movie/MovieCard";
 import ListingFilters from "@/components/movie/ListingFilters";
-import { getPhimByAdvancedFilters } from "@/lib/api";
+import { getPhimByAdvancedFiltersPage } from "@/lib/api";
 
 interface FilterPageProps {
   searchParams: Promise<{
@@ -9,8 +10,12 @@ interface FilterPageProps {
     "the-loai"?: string;
     "quoc-gia"?: string;
     nam?: string;
+    page?: string;
   }>;
 }
+
+const PAGE_SIZE = 40;
+const PAGE_WINDOW_SIZE = 4;
 
 export const revalidate = 1800;
 
@@ -28,6 +33,62 @@ export async function generateMetadata({ searchParams }: FilterPageProps) {
   };
 }
 
+function getPageWindowStart(currentPage: number) {
+  return Math.floor((currentPage - 1) / (PAGE_WINDOW_SIZE - 1)) * (PAGE_WINDOW_SIZE - 1) + 1;
+}
+
+function getVisiblePages(currentPage: number, hasMore: boolean) {
+  const windowStart = getPageWindowStart(currentPage);
+  const pages: number[] = [];
+
+  for (let index = 0; index < PAGE_WINDOW_SIZE; index += 1) {
+    const pageNumber = windowStart + index;
+
+    if (!hasMore && pageNumber > currentPage) {
+      break;
+    }
+
+    pages.push(pageNumber);
+  }
+
+  return pages;
+}
+
+function buildPageHref(
+  page: number,
+  params: {
+    categorySlug: string;
+    genreSlugs: string[];
+    countrySlug: string;
+    year: string;
+  }
+) {
+  const query = new URLSearchParams();
+
+  if (params.categorySlug) {
+    query.set("danh-sach", params.categorySlug);
+  }
+
+  if (params.genreSlugs.length > 0) {
+    query.set("the-loai", params.genreSlugs.join(","));
+  }
+
+  if (params.countrySlug) {
+    query.set("quoc-gia", params.countrySlug);
+  }
+
+  if (params.year) {
+    query.set("nam", params.year);
+  }
+
+  if (page > 1) {
+    query.set("page", String(page));
+  }
+
+  const queryString = query.toString();
+  return queryString ? `/loc?${queryString}` : "/loc";
+}
+
 export default async function AdvancedFilterPage({ searchParams }: FilterPageProps) {
   const params = await searchParams;
   const categorySlug = params["danh-sach"]?.trim() || "";
@@ -37,17 +98,49 @@ export default async function AdvancedFilterPage({ searchParams }: FilterPagePro
     .filter(Boolean);
   const countrySlug = params["quoc-gia"]?.trim() || "";
   const year = params.nam?.trim() || "";
+  const currentPage = Math.max(1, Number.parseInt(params.page || "1", 10) || 1);
 
   const hasAnyFilter = Boolean(categorySlug || genreSlugs.length > 0 || countrySlug || year);
 
-  const items = hasAnyFilter
-    ? await getPhimByAdvancedFilters({
-        categorySlug: categorySlug || undefined,
-        genreSlugs: genreSlugs.length > 0 ? genreSlugs : undefined,
-        countrySlug: countrySlug || undefined,
-        year: year || undefined,
-      })
-    : [];
+  const result = hasAnyFilter
+    ? await getPhimByAdvancedFiltersPage(
+        {
+          categorySlug: categorySlug || undefined,
+          genreSlugs: genreSlugs.length > 0 ? genreSlugs : undefined,
+          countrySlug: countrySlug || undefined,
+          year: year || undefined,
+        },
+        currentPage,
+        PAGE_SIZE
+      )
+    : { items: [], hasMore: false };
+
+  const windowStart = getPageWindowStart(currentPage);
+  const previousWindowPage =
+    windowStart > 1 ? Math.max(1, windowStart - (PAGE_WINDOW_SIZE - 1)) : null;
+  const nextWindowPage = result.hasMore ? windowStart + (PAGE_WINDOW_SIZE - 1) : null;
+
+  const previousPageHref =
+    previousWindowPage !== null
+      ? buildPageHref(previousWindowPage, {
+          categorySlug,
+          genreSlugs,
+          countrySlug,
+          year,
+        })
+      : null;
+
+  const nextPageHref =
+    nextWindowPage !== null
+      ? buildPageHref(nextWindowPage, {
+          categorySlug,
+          genreSlugs,
+          countrySlug,
+          year,
+        })
+      : null;
+
+  const visiblePages = getVisiblePages(currentPage, result.hasMore);
 
   return (
     <div className="container mx-auto min-h-screen px-4 pb-16 pt-24">
@@ -73,16 +166,70 @@ export default async function AdvancedFilterPage({ searchParams }: FilterPagePro
       />
 
       {hasAnyFilter ? (
-        items.length > 0 ? (
-          <div className="space-y-4">
-            <p className="text-sm text-zinc-400">
-              Tìm thấy <span className="font-semibold text-white">{items.length}</span> phim phù
-              hợp.
-            </p>
+        result.items.length > 0 ? (
+          <div className="space-y-5">
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 md:gap-5">
-              {items.map((movie) => (
+              {result.items.map((movie) => (
                 <MovieCard key={movie.slug} movie={movie} />
               ))}
+            </div>
+
+            <div className="space-y-3 pt-2">
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                {visiblePages.map((pageNumber) => {
+                  const href = buildPageHref(pageNumber, {
+                    categorySlug,
+                    genreSlugs,
+                    countrySlug,
+                    year,
+                  });
+
+                  return pageNumber === currentPage ? (
+                    <span
+                      key={pageNumber}
+                      className="inline-flex h-10 min-w-10 items-center justify-center rounded-2xl bg-amber-400 px-3 text-sm font-semibold text-black shadow-[0_0_20px_rgba(251,191,36,0.25)] sm:h-11 sm:min-w-11 sm:px-4"
+                    >
+                      {pageNumber}
+                    </span>
+                  ) : (
+                    <Link
+                      key={pageNumber}
+                      href={href}
+                      className="inline-flex h-10 min-w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] px-3 text-sm font-medium text-zinc-300 transition hover:border-amber-400/40 hover:text-white sm:h-11 sm:min-w-11 sm:px-4"
+                    >
+                      {pageNumber}
+                    </Link>
+                  );
+                })}
+              </div>
+
+              <div className="flex items-center justify-center gap-2 sm:gap-3">
+                {previousPageHref ? (
+                  <Link
+                    href={previousPageHref}
+                    className="inline-flex h-10 min-w-[110px] items-center justify-center rounded-2xl border border-white/10 px-4 text-sm font-medium text-zinc-200 transition hover:border-amber-400/40 hover:text-white sm:h-11 sm:min-w-11"
+                  >
+                    Trang trước
+                  </Link>
+                ) : (
+                  <span className="inline-flex h-10 min-w-[110px] items-center justify-center rounded-2xl border border-white/5 px-4 text-sm font-medium text-zinc-600 sm:h-11 sm:min-w-11">
+                    Trang trước
+                  </span>
+                )}
+
+                {nextPageHref ? (
+                  <Link
+                    href={nextPageHref}
+                    className="inline-flex h-10 min-w-[110px] items-center justify-center rounded-2xl border border-white/10 px-4 text-sm font-medium text-zinc-200 transition hover:border-amber-400/40 hover:text-white sm:h-11 sm:min-w-11"
+                  >
+                    Trang sau
+                  </Link>
+                ) : (
+                  <span className="inline-flex h-10 min-w-[110px] items-center justify-center rounded-2xl border border-white/5 px-4 text-sm font-medium text-zinc-600 sm:h-11 sm:min-w-11">
+                    Trang sau
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         ) : (

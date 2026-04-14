@@ -43,7 +43,13 @@ export interface EpisodeServer {
 
 export interface MovieDetail extends PhimItem {
   id: string;
-  category: Record<string, { group: { id: string; name: string }; list: { id: string; name: string }[] }>;
+  category: Record<
+    string,
+    {
+      group: { id: string; name: string };
+      list: { id: string; name: string }[];
+    }
+  >;
   episodes: EpisodeServer[];
 }
 
@@ -52,13 +58,10 @@ export interface FilmDetailResponse {
   movie: MovieDetail;
 }
 
-/**
- * Lấy danh sách phim mới cập nhật
- */
 export async function getPhimMoi(page: number = 1): Promise<PhimResponse | null> {
   try {
     const res = await fetch(`${API_BASE}/films/phim-moi-cap-nhat?page=${page}`, {
-      next: { revalidate: 3600 } // Tự động cache 1 giờ ở Vercel Edge 
+      next: { revalidate: 3600 },
     });
     if (!res.ok) throw new Error("Fetch failed");
     return await res.json();
@@ -68,13 +71,13 @@ export async function getPhimMoi(page: number = 1): Promise<PhimResponse | null>
   }
 }
 
-/**
- * Lấy danh sách phim theo danh mục (SLUG)
- */
-export async function getPhimTheoDanhSach(slug: string, page: number = 1): Promise<PhimResponse | null> {
+export async function getPhimTheoDanhSach(
+  slug: string,
+  page: number = 1
+): Promise<PhimResponse | null> {
   try {
     const res = await fetch(`${API_BASE}/films/danh-sach/${slug}?page=${page}`, {
-      next: { revalidate: 3600 }
+      next: { revalidate: 3600 },
     });
     if (!res.ok) throw new Error("Fetch failed");
     return await res.json();
@@ -84,14 +87,14 @@ export async function getPhimTheoDanhSach(slug: string, page: number = 1): Promi
   }
 }
 
-/**
- * Lấy danh sách phim theo thể loại
- */
-export async function getPhimTheoTheLoai(slug: string, page: number = 1): Promise<PhimResponse | null> {
+export async function getPhimTheoTheLoai(
+  slug: string,
+  page: number = 1
+): Promise<PhimResponse | null> {
   if (!slug) return null;
   try {
     const res = await fetch(`${API_BASE}/films/the-loai/${slug}?page=${page}`, {
-      next: { revalidate: 86400 } // Danh sách theo thể loại lưu kho 24h
+      next: { revalidate: 86400 },
     });
     if (!res.ok) {
       console.warn(`Fetch failed for genre ${slug}: ${res.status}`);
@@ -104,13 +107,13 @@ export async function getPhimTheoTheLoai(slug: string, page: number = 1): Promis
   }
 }
 
-/**
- * Lấy danh sách phim theo quốc gia
- */
-export async function getPhimTheoQuocGia(slug: string, page: number = 1): Promise<PhimResponse | null> {
+export async function getPhimTheoQuocGia(
+  slug: string,
+  page: number = 1
+): Promise<PhimResponse | null> {
   try {
     const res = await fetch(`${API_BASE}/films/quoc-gia/${slug}?page=${page}`, {
-      next: { revalidate: 86400 }
+      next: { revalidate: 86400 },
     });
     if (!res.ok) throw new Error("Fetch failed");
     return await res.json();
@@ -120,13 +123,13 @@ export async function getPhimTheoQuocGia(slug: string, page: number = 1): Promis
   }
 }
 
-/**
- * Lấy danh sách phim theo năm phát hành
- */
-export async function getPhimTheoNam(year: string, page: number = 1): Promise<PhimResponse | null> {
+export async function getPhimTheoNam(
+  year: string,
+  page: number = 1
+): Promise<PhimResponse | null> {
   try {
     const res = await fetch(`${API_BASE}/films/nam-phat-hanh/${year}?page=${page}`, {
-      next: { revalidate: 86400 }
+      next: { revalidate: 86400 },
     });
     if (!res.ok) throw new Error("Fetch failed");
     return await res.json();
@@ -136,36 +139,43 @@ export async function getPhimTheoNam(year: string, page: number = 1): Promise<Ph
   }
 }
 
-/**
- * Lấy chi tiết thông tin phim & danh sách tập video
- */
-export async function getPhimDetail(slug: string): Promise<FilmDetailResponse | null> {
+interface GetPhimDetailOptions {
+  silent?: boolean;
+}
+
+export async function getPhimDetail(
+  slug: string,
+  options: GetPhimDetailOptions = {}
+): Promise<FilmDetailResponse | null> {
   try {
     const res = await fetch(`${API_BASE}/film/${slug}`, {
-      next: { revalidate: 3600 }
+      next: { revalidate: 3600 },
     });
-    if (!res.ok) throw new Error("Fetch failed");
+    if (!res.ok) {
+      if (!options.silent) {
+        console.error(`Error fetching Detail ${slug}: ${res.status}`);
+      }
+      return null;
+    }
     return await res.json();
   } catch (error) {
-    console.error(`Error fetching Detail ${slug}:`, error);
+    if (!options.silent) {
+      console.error(`Error fetching Detail ${slug}:`, error);
+    }
     return null;
   }
 }
 
-/**
- * Tìm kiếm phim bằng từ khóa
- */
 export async function searchPhim(keyword: string): Promise<PhimResponse | null> {
   if (!keyword) return null;
   try {
-    // Tìm kiếm không nên Cache
     const res = await fetch(`${API_BASE}/films/search?keyword=${encodeURIComponent(keyword)}`, {
-      cache: "no-store" 
+      cache: "no-store",
     });
     if (!res.ok) throw new Error("Fetch failed");
     return await res.json();
   } catch (error) {
-    console.error(`Error searching phim:`, error);
+    console.error("Error searching phim:", error);
     return null;
   }
 }
@@ -178,6 +188,24 @@ export interface AdvancedFilterParams {
   maxPagesPerFilter?: number;
 }
 
+export interface AdvancedFilterPageResult {
+  items: PhimItem[];
+  hasMore: boolean;
+}
+
+interface FilterSource {
+  kind: "category" | "genre" | "country" | "year";
+  slug: string;
+  path: string;
+}
+
+interface FilterSourcePreview {
+  source: FilterSource;
+  items: PhimItem[];
+  totalItems: number;
+  totalPages: number;
+}
+
 function getCategoryPath(slug: string) {
   if (slug === "phim-moi" || slug === "phim-moi-cap-nhat") {
     return "/films/phim-moi-cap-nhat";
@@ -186,131 +214,508 @@ function getCategoryPath(slug: string) {
   return `/films/danh-sach/${slug}`;
 }
 
-async function fetchFilmsByPath(path: string, maxPages: number): Promise<PhimItem[]> {
+function normalizeFilterValue(value: string | null | undefined) {
+  return (value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function slugifyFilterValue(value: string | null | undefined) {
+  return normalizeFilterValue(value)
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function isCategoryResolvedByListSource(slug: string) {
+  return ["phim-moi", "phim-moi-cap-nhat", "tv-shows", "subteam"].includes(slug);
+}
+
+function isSingleMovie(item: PhimItem) {
+  const episodeStatus = normalizeFilterValue(item.current_episode);
+  return item.total_episodes <= 1 || episodeStatus.includes("full");
+}
+
+function isCompletedSeries(item: PhimItem) {
+  const episodeStatus = normalizeFilterValue(item.current_episode);
+  return episodeStatus.includes("hoan tat") || episodeStatus.includes("tron bo");
+}
+
+function matchesCategoryFromItem(item: PhimItem, categorySlug: string) {
+  const languageSlug = slugifyFilterValue(item.language);
+
+  switch (categorySlug) {
+    case "phim-le":
+      return isSingleMovie(item);
+    case "phim-bo":
+      return !isSingleMovie(item);
+    case "phim-tron-bo":
+      return !isSingleMovie(item) && isCompletedSeries(item);
+    case "phim-dang-chieu":
+      return !isSingleMovie(item) && !isCompletedSeries(item);
+    case "phim-vietsub":
+      return languageSlug.includes("vietsub");
+    case "phim-thuyet-minh":
+      return languageSlug.includes("thuyet-minh");
+    case "phim-long-tieng":
+      return languageSlug.includes("long-tieng");
+    default:
+      return true;
+  }
+}
+
+async function fetchFilmPage(path: string, page: number): Promise<PhimResponse | null> {
+  try {
+    const res = await fetch(`${API_BASE}${path}?page=${page}`, {
+      next: { revalidate: 1800 },
+    });
+
+    if (!res.ok) return null;
+
+    return (await res.json()) as PhimResponse;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchSourcePreview(source: FilterSource): Promise<FilterSourcePreview | null> {
+  const data = await fetchFilmPage(source.path, 1);
+  if (!data) return null;
+
+  return {
+    source,
+    items: data.items || [],
+    totalItems: data.paginate?.total_items || 0,
+    totalPages: data.paginate?.total_page || 1,
+  };
+}
+
+async function fetchFilmsFromPreview(
+  preview: FilterSourcePreview,
+  maxPages: number
+): Promise<PhimItem[]> {
   const movieMap = new Map<string, PhimItem>();
-  let totalPages = 1;
 
-  for (let page = 1; page <= totalPages && page <= maxPages; page += 1) {
-    try {
-      const res = await fetch(`${API_BASE}${path}?page=${page}`, {
-        next: { revalidate: 1800 },
-      });
+  for (const movie of preview.items) {
+    if (!movieMap.has(movie.slug)) {
+      movieMap.set(movie.slug, movie);
+    }
+  }
 
-      if (!res.ok) break;
+  const finalPage = Math.min(preview.totalPages, maxPages);
+  const remainingPages = Array.from({ length: Math.max(finalPage - 1, 0) }, (_, index) => index + 2);
+  const batchSize = 8;
 
-      const data = (await res.json()) as PhimResponse;
-      totalPages = data.paginate?.total_page || 1;
+  for (let index = 0; index < remainingPages.length; index += batchSize) {
+    const pageBatch = remainingPages.slice(index, index + batchSize);
+    const responses = await Promise.all(
+      pageBatch.map((page) => fetchFilmPage(preview.source.path, page))
+    );
+
+    for (const data of responses) {
+      if (!data) continue;
 
       for (const movie of data.items || []) {
         if (!movieMap.has(movie.slug)) {
           movieMap.set(movie.slug, movie);
         }
       }
-    } catch {
-      break;
     }
   }
 
   return Array.from(movieMap.values());
 }
 
+async function fetchUnionByGenres(genreSlugs: string[], maxPages: number): Promise<PhimItem[]> {
+  const previews = await Promise.all(
+    genreSlugs.map((slug) =>
+      fetchSourcePreview({
+        kind: "genre",
+        slug,
+        path: `/films/the-loai/${slug}`,
+      })
+    )
+  );
+  const movieMap = new Map<string, PhimItem>();
+
+  for (const preview of previews) {
+    if (!preview) continue;
+
+    const items = await fetchFilmsFromPreview(preview, maxPages);
+    for (const movie of items) {
+      movieMap.set(movie.slug, movie);
+    }
+  }
+
+  return Array.from(movieMap.values());
+}
+
+function getCategoryGroupSlugs(movie: MovieDetail, groupSlug: string) {
+  return Object.values(movie.category || {})
+    .filter((entry) => slugifyFilterValue(entry?.group?.name) === groupSlug)
+    .flatMap((entry) =>
+      Array.isArray(entry?.list)
+        ? entry.list.map((item) => slugifyFilterValue(item?.name))
+        : []
+    )
+    .filter(Boolean);
+}
+
+function matchesAdvancedDetailFilters(
+  movieItem: PhimItem,
+  movieDetail: MovieDetail,
+  params: AdvancedFilterParams,
+  selectedGenreSlugs: string[],
+  selectedBase: FilterSource
+) {
+  if (
+    params.categorySlug &&
+    !(selectedBase.kind === "category" && selectedBase.slug === params.categorySlug)
+  ) {
+    if (!matchesCategoryFromItem(movieItem, params.categorySlug)) {
+      return false;
+    }
+  }
+
+  if (params.countrySlug) {
+    const countrySlugs = getCategoryGroupSlugs(movieDetail, "quoc-gia");
+    if (!countrySlugs.includes(params.countrySlug)) {
+      return false;
+    }
+  }
+
+  if (params.year) {
+    const yearSlugs = getCategoryGroupSlugs(movieDetail, "nam");
+    if (!yearSlugs.includes(params.year)) {
+      return false;
+    }
+  }
+
+  if (selectedGenreSlugs.length > 0) {
+    const genreSlugs = getCategoryGroupSlugs(movieDetail, "the-loai");
+    if (!selectedGenreSlugs.some((slug) => genreSlugs.includes(slug))) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 export async function getPhimByAdvancedFilters(
   params: AdvancedFilterParams
 ): Promise<PhimItem[]> {
-  const maxPages = Math.max(1, Math.min(params.maxPagesPerFilter || 8, 20));
-  const datasets: PhimItem[][] = [];
+  const normalizedGenreSlugs = Array.from(
+    new Set((params.genreSlugs || []).map((item) => item.trim()).filter(Boolean))
+  );
+  const maxPages = params.maxPagesPerFilter
+    ? Math.max(1, Math.min(params.maxPagesPerFilter, 5000))
+    : Number.MAX_SAFE_INTEGER;
 
-  // Categories that can be determined client-side from movie metadata
-  // instead of relying on API intersection which yields very few results
-  // (the API returns only 10 items/page, so 8 pages = 80 items from a pool
-  // of 10K+, making intersection with other filters nearly empty)
-  const CLIENT_SIDE_CATEGORIES: Record<string, (m: PhimItem) => boolean> = {
-    "phim-le": (m) => m.total_episodes <= 1,
-    "phim-bo": (m) => m.total_episodes > 1,
-  };
+  const onlyGenresSelected =
+    normalizedGenreSlugs.length > 0 &&
+    !params.categorySlug &&
+    !params.countrySlug &&
+    !params.year;
 
-  const clientCategoryFn = params.categorySlug
-    ? CLIENT_SIDE_CATEGORIES[params.categorySlug] ?? null
-    : null;
+  if (onlyGenresSelected) {
+    const genreItems = await fetchUnionByGenres(normalizedGenreSlugs, maxPages);
+    return genreItems.sort(
+      (a, b) =>
+        new Date(b.modified || b.created || 0).getTime() -
+        new Date(a.modified || a.created || 0).getTime()
+    );
+  }
 
-  const hasOtherFilters =
-    (params.genreSlugs && params.genreSlugs.length > 0) ||
-    !!params.countrySlug ||
-    !!params.year;
+  const candidateSources: FilterSource[] = [];
 
   if (params.categorySlug) {
-    if (clientCategoryFn && hasOtherFilters) {
-      // Skip API fetch for this category; will apply client-side post-filter
-    } else {
-      // Either not client-filterable (e.g. phim-dang-chieu, tv-shows)
-      // or it's the only filter → must fetch from API
-      datasets.push(
-        await fetchFilmsByPath(getCategoryPath(params.categorySlug), maxPages)
-      );
-    }
+    candidateSources.push({
+      kind: "category",
+      slug: params.categorySlug,
+      path: getCategoryPath(params.categorySlug),
+    });
   }
+
+  if (params.countrySlug) {
+    candidateSources.push({
+      kind: "country",
+      slug: params.countrySlug,
+      path: `/films/quoc-gia/${params.countrySlug}`,
+    });
+  }
+
+  if (params.year) {
+    candidateSources.push({
+      kind: "year",
+      slug: params.year,
+      path: `/films/nam-phat-hanh/${params.year}`,
+    });
+  }
+
+  if (normalizedGenreSlugs.length === 1) {
+    candidateSources.push({
+      kind: "genre",
+      slug: normalizedGenreSlugs[0],
+      path: `/films/the-loai/${normalizedGenreSlugs[0]}`,
+    });
+  }
+
+  if (candidateSources.length === 0) {
+    return [];
+  }
+
+  const previews = (await Promise.all(candidateSources.map(fetchSourcePreview))).filter(
+    (preview): preview is FilterSourcePreview => Boolean(preview)
+  );
+
+  if (previews.length === 0) {
+    return [];
+  }
+
+  const forcedCategoryPreview =
+    params.categorySlug && isCategoryResolvedByListSource(params.categorySlug)
+      ? previews.find(
+          (preview) =>
+            preview.source.kind === "category" && preview.source.slug === params.categorySlug
+        )
+      : null;
+
+  const basePreview =
+    forcedCategoryPreview ||
+    previews.reduce((smallest, current) =>
+      current.totalItems < smallest.totalItems ? current : smallest
+    );
+
+  let baseMovies = await fetchFilmsFromPreview(basePreview, maxPages);
+
+  const needsCategoryCheck =
+    Boolean(params.categorySlug) &&
+    !(basePreview.source.kind === "category" && basePreview.source.slug === params.categorySlug);
+
+  if (needsCategoryCheck && params.categorySlug) {
+    baseMovies = baseMovies.filter((movie) => matchesCategoryFromItem(movie, params.categorySlug!));
+  }
+
+  const needsCountryCheck =
+    Boolean(params.countrySlug) &&
+    !(basePreview.source.kind === "country" && basePreview.source.slug === params.countrySlug);
+  const needsYearCheck =
+    Boolean(params.year) &&
+    !(basePreview.source.kind === "year" && basePreview.source.slug === params.year);
+  const needsGenreCheck =
+    normalizedGenreSlugs.length > 0 &&
+    !(
+      basePreview.source.kind === "genre" &&
+      normalizedGenreSlugs.length === 1 &&
+      basePreview.source.slug === normalizedGenreSlugs[0]
+    );
+
+  if (!needsCategoryCheck && !needsCountryCheck && !needsYearCheck && !needsGenreCheck) {
+    return baseMovies.sort(
+      (a, b) =>
+        new Date(b.modified || b.created || 0).getTime() -
+        new Date(a.modified || a.created || 0).getTime()
+    );
+  }
+
+  const filteredMovies: PhimItem[] = [];
+
+  for (let index = 0; index < baseMovies.length; index += 10) {
+    const batch = baseMovies.slice(index, index + 10);
+    const batchResults = await Promise.all(
+      batch.map(async (movie) => {
+        const detailResponse = await getPhimDetail(movie.slug, { silent: true });
+        if (!detailResponse?.movie) {
+          return null;
+        }
+
+        return matchesAdvancedDetailFilters(
+          movie,
+          detailResponse.movie,
+          params,
+          normalizedGenreSlugs,
+          basePreview.source
+        )
+          ? movie
+          : null;
+      })
+    );
+
+    filteredMovies.push(
+      ...batchResults.filter((movie): movie is PhimItem => Boolean(movie))
+    );
+  }
+
+  return filteredMovies.sort(
+    (a, b) =>
+      new Date(b.modified || b.created || 0).getTime() -
+      new Date(a.modified || a.created || 0).getTime()
+  );
+}
+
+export async function getPhimByAdvancedFiltersPage(
+  params: AdvancedFilterParams,
+  page: number,
+  pageSize: number
+): Promise<AdvancedFilterPageResult> {
+  const safePage = Math.max(1, page);
+  const safePageSize = Math.max(1, pageSize);
+  const startIndex = (safePage - 1) * safePageSize;
+  const endIndexExclusive = startIndex + safePageSize;
 
   const normalizedGenreSlugs = Array.from(
     new Set((params.genreSlugs || []).map((item) => item.trim()).filter(Boolean))
   );
+  const maxPages = params.maxPagesPerFilter
+    ? Math.max(1, Math.min(params.maxPagesPerFilter, 5000))
+    : Number.MAX_SAFE_INTEGER;
 
-  if (normalizedGenreSlugs.length > 0) {
-    const genreDatasets = await Promise.all(
-      normalizedGenreSlugs.map((slug) => fetchFilmsByPath(`/films/the-loai/${slug}`, maxPages))
-    );
-    const genreUnionMap = new Map<string, PhimItem>();
-    for (const genreItems of genreDatasets) {
-      for (const movie of genreItems) {
-        genreUnionMap.set(movie.slug, movie);
-      }
-    }
-    datasets.push(Array.from(genreUnionMap.values()));
+  const onlyGenresSelected =
+    normalizedGenreSlugs.length > 0 &&
+    !params.categorySlug &&
+    !params.countrySlug &&
+    !params.year;
+
+  if (onlyGenresSelected) {
+    const allItems = await getPhimByAdvancedFilters(params);
+    return {
+      items: allItems.slice(startIndex, endIndexExclusive),
+      hasMore: allItems.length > endIndexExclusive,
+    };
+  }
+
+  const candidateSources: FilterSource[] = [];
+
+  if (params.categorySlug) {
+    candidateSources.push({
+      kind: "category",
+      slug: params.categorySlug,
+      path: getCategoryPath(params.categorySlug),
+    });
   }
 
   if (params.countrySlug) {
-    datasets.push(await fetchFilmsByPath(`/films/quoc-gia/${params.countrySlug}`, maxPages));
+    candidateSources.push({
+      kind: "country",
+      slug: params.countrySlug,
+      path: `/films/quoc-gia/${params.countrySlug}`,
+    });
   }
 
   if (params.year) {
-    datasets.push(await fetchFilmsByPath(`/films/nam-phat-hanh/${params.year}`, maxPages));
+    candidateSources.push({
+      kind: "year",
+      slug: params.year,
+      path: `/films/nam-phat-hanh/${params.year}`,
+    });
   }
 
-  if (datasets.length === 0) return [];
+  if (normalizedGenreSlugs.length === 1) {
+    candidateSources.push({
+      kind: "genre",
+      slug: normalizedGenreSlugs[0],
+      path: `/films/the-loai/${normalizedGenreSlugs[0]}`,
+    });
+  }
 
-  if (datasets.some((items) => items.length === 0)) return [];
+  if (candidateSources.length === 0) {
+    return { items: [], hasMore: false };
+  }
 
-  const [firstSet, ...restSets] = datasets.map(
-    (items) => new Set(items.map((movie) => movie.slug))
+  const previews = (await Promise.all(candidateSources.map(fetchSourcePreview))).filter(
+    (preview): preview is FilterSourcePreview => Boolean(preview)
   );
 
-  const slugIntersection = Array.from(firstSet).filter((slug) =>
-    restSets.every((set) => set.has(slug))
-  );
-
-  const mergedMap = new Map<string, PhimItem>();
-  for (const dataset of datasets) {
-    for (const movie of dataset) {
-      if (!mergedMap.has(movie.slug)) {
-        mergedMap.set(movie.slug, movie);
-      }
-    }
+  if (previews.length === 0) {
+    return { items: [], hasMore: false };
   }
 
-  let mergedItems = slugIntersection
-    .map((slug) => mergedMap.get(slug))
-    .filter((movie): movie is PhimItem => Boolean(movie));
+  const forcedCategoryPreview =
+    params.categorySlug && isCategoryResolvedByListSource(params.categorySlug)
+      ? previews.find(
+          (preview) =>
+            preview.source.kind === "category" && preview.source.slug === params.categorySlug
+        )
+      : null;
 
-  // Apply client-side category filter (phim-le / phim-bo) as post-filter
-  // instead of intersection, so all genre/year/country results are preserved
-  if (clientCategoryFn) {
-    mergedItems = mergedItems.filter(clientCategoryFn);
+  const basePreview =
+    forcedCategoryPreview ||
+    previews.reduce((smallest, current) =>
+      current.totalItems < smallest.totalItems ? current : smallest
+    );
+
+  let baseMovies = await fetchFilmsFromPreview(basePreview, maxPages);
+
+  const needsCategoryCheck =
+    Boolean(params.categorySlug) &&
+    !(basePreview.source.kind === "category" && basePreview.source.slug === params.categorySlug);
+
+  if (needsCategoryCheck && params.categorySlug) {
+    baseMovies = baseMovies.filter((movie) => matchesCategoryFromItem(movie, params.categorySlug!));
   }
 
-  mergedItems.sort(
+  baseMovies = baseMovies.sort(
     (a, b) =>
       new Date(b.modified || b.created || 0).getTime() -
       new Date(a.modified || a.created || 0).getTime()
   );
 
-  return mergedItems;
+  const needsCountryCheck =
+    Boolean(params.countrySlug) &&
+    !(basePreview.source.kind === "country" && basePreview.source.slug === params.countrySlug);
+  const needsYearCheck =
+    Boolean(params.year) &&
+    !(basePreview.source.kind === "year" && basePreview.source.slug === params.year);
+  const needsGenreCheck =
+    normalizedGenreSlugs.length > 0 &&
+    !(
+      basePreview.source.kind === "genre" &&
+      normalizedGenreSlugs.length === 1 &&
+      basePreview.source.slug === normalizedGenreSlugs[0]
+    );
+
+  if (!needsCategoryCheck && !needsCountryCheck && !needsYearCheck && !needsGenreCheck) {
+    return {
+      items: baseMovies.slice(startIndex, endIndexExclusive),
+      hasMore: baseMovies.length > endIndexExclusive,
+    };
+  }
+
+  const matchedMovies: PhimItem[] = [];
+
+  for (let index = 0; index < baseMovies.length; index += 10) {
+    const batch = baseMovies.slice(index, index + 10);
+    const batchResults = await Promise.all(
+      batch.map(async (movie) => {
+        const detailResponse = await getPhimDetail(movie.slug, { silent: true });
+        if (!detailResponse?.movie) {
+          return null;
+        }
+
+        return matchesAdvancedDetailFilters(
+          movie,
+          detailResponse.movie,
+          params,
+          normalizedGenreSlugs,
+          basePreview.source
+        )
+          ? movie
+          : null;
+      })
+    );
+
+    matchedMovies.push(
+      ...batchResults.filter((movie): movie is PhimItem => Boolean(movie))
+    );
+
+    if (matchedMovies.length > endIndexExclusive) {
+      break;
+    }
+  }
+
+  return {
+    items: matchedMovies.slice(startIndex, endIndexExclusive),
+    hasMore: matchedMovies.length > endIndexExclusive,
+  };
 }

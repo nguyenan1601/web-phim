@@ -37,7 +37,7 @@ const GENRE_OPTIONS = [
   { slug: "bi-an", label: "Bí ẩn" },
   { slug: "lang-man", label: "Lãng mạn" },
   { slug: "khoa-hoc-vien-tuong", label: "Khoa học viễn tưởng" },
-  { slug: "gay-can", label: "Gây cấn" },
+  { slug: "gay-can", label: "Gay cấn" },
   { slug: "chien-tranh", label: "Chiến tranh" },
   { slug: "tam-ly", label: "Tâm lý" },
   { slug: "tinh-cam", label: "Tình cảm" },
@@ -67,9 +67,9 @@ const COUNTRY_OPTIONS = [
 ];
 
 const CURRENT_YEAR = new Date().getFullYear();
+const EARLIEST_SUGGESTED_YEAR = 2000;
 const YEAR_OPTIONS = [
-  { slug: "", label: "Năm" },
-  ...Array.from({ length: CURRENT_YEAR - 2004 + 1 }, (_, index) => {
+  ...Array.from({ length: CURRENT_YEAR - EARLIEST_SUGGESTED_YEAR + 1 }, (_, index) => {
     const year = CURRENT_YEAR - index;
     return { slug: year.toString(), label: year.toString() };
   }),
@@ -130,11 +130,13 @@ export default function ListingFilters({
   const handleFilterSearch = () => {
     if (!hasAnyFilter) return;
 
+    const normalizedYear = year.trim();
     const params = new URLSearchParams();
+
     if (category) params.set("danh-sach", category);
     if (genres.length > 0) params.set("the-loai", genres.join(","));
     if (country) params.set("quoc-gia", country);
-    if (year) params.set("nam", year);
+    if (normalizedYear) params.set("nam", normalizedYear);
 
     router.push(`/loc?${params.toString()}`);
   };
@@ -202,6 +204,7 @@ export default function ListingFilters({
                 <div className="grid max-h-56 grid-cols-1 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
                   {GENRE_OPTIONS.map((option) => {
                     const isActive = genres.includes(option.slug);
+
                     return (
                       <button
                         key={option.slug}
@@ -270,17 +273,24 @@ export default function ListingFilters({
           <span className="mb-2 block text-xs font-medium uppercase tracking-wide text-zinc-400">
             Năm
           </span>
-          <select
+          <input
+            list="filter-year-options"
             value={year}
             onChange={(event) => setYear(event.target.value)}
-            className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm text-white outline-none transition focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/10"
-          >
+            inputMode="numeric"
+            pattern="[0-9]*"
+            placeholder="Khác (vui lòng nhập năm)"
+            className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm text-white outline-none transition placeholder:text-zinc-500 focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/10"
+          />
+          <datalist id="filter-year-options">
+            <option value="">Năm</option>
             {YEAR_OPTIONS.map((option) => (
               <option key={option.label} value={option.slug}>
                 {option.label}
               </option>
             ))}
-          </select>
+            <option value="">Vui lòng nhập năm</option>
+          </datalist>
         </label>
       </div>
 
