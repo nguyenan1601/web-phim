@@ -41,9 +41,6 @@ export default function ClientGuestHistory({ serverHistory = [], userId }: Props
   }, [userId]);
 
   useEffect(() => {
-    // Fetch fresh data on mount
-    refreshHistory();
-
     // Re-fetch when tab regains focus (covers: delete on /lich-su then navigate back)
     const handleFocus = () => refreshHistory();
     const handleVisibility = () => {

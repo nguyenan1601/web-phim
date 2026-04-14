@@ -220,8 +220,34 @@ export async function getPhimByAdvancedFilters(
   const maxPages = Math.max(1, Math.min(params.maxPagesPerFilter || 8, 20));
   const datasets: PhimItem[][] = [];
 
+  // Categories that can be determined client-side from movie metadata
+  // instead of relying on API intersection which yields very few results
+  // (the API returns only 10 items/page, so 8 pages = 80 items from a pool
+  // of 10K+, making intersection with other filters nearly empty)
+  const CLIENT_SIDE_CATEGORIES: Record<string, (m: PhimItem) => boolean> = {
+    "phim-le": (m) => m.total_episodes <= 1,
+    "phim-bo": (m) => m.total_episodes > 1,
+  };
+
+  const clientCategoryFn = params.categorySlug
+    ? CLIENT_SIDE_CATEGORIES[params.categorySlug] ?? null
+    : null;
+
+  const hasOtherFilters =
+    (params.genreSlugs && params.genreSlugs.length > 0) ||
+    !!params.countrySlug ||
+    !!params.year;
+
   if (params.categorySlug) {
-    datasets.push(await fetchFilmsByPath(getCategoryPath(params.categorySlug), maxPages));
+    if (clientCategoryFn && hasOtherFilters) {
+      // Skip API fetch for this category; will apply client-side post-filter
+    } else {
+      // Either not client-filterable (e.g. phim-dang-chieu, tv-shows)
+      // or it's the only filter → must fetch from API
+      datasets.push(
+        await fetchFilmsByPath(getCategoryPath(params.categorySlug), maxPages)
+      );
+    }
   }
 
   const normalizedGenreSlugs = Array.from(
@@ -270,14 +296,21 @@ export async function getPhimByAdvancedFilters(
     }
   }
 
-  const mergedItems = slugIntersection
+  let mergedItems = slugIntersection
     .map((slug) => mergedMap.get(slug))
-    .filter((movie): movie is PhimItem => Boolean(movie))
-    .sort(
-      (a, b) =>
-        new Date(b.modified || b.created || 0).getTime() -
-        new Date(a.modified || a.created || 0).getTime()
-    );
+    .filter((movie): movie is PhimItem => Boolean(movie));
+
+  // Apply client-side category filter (phim-le / phim-bo) as post-filter
+  // instead of intersection, so all genre/year/country results are preserved
+  if (clientCategoryFn) {
+    mergedItems = mergedItems.filter(clientCategoryFn);
+  }
+
+  mergedItems.sort(
+    (a, b) =>
+      new Date(b.modified || b.created || 0).getTime() -
+      new Date(a.modified || a.created || 0).getTime()
+  );
 
   return mergedItems;
 }

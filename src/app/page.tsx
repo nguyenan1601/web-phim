@@ -18,10 +18,10 @@ export default async function Home() {
   const gridMovies = phimMoi.slice(1, 16);
 
   return (
-    <div className="flex flex-col flex-1 pb-16">
+    <div className="flex flex-col flex-1 pb-16 overflow-x-hidden">
       {/* Hero Section */}
       {heroMovie && (
-        <div className="relative w-full h-[65vh] md:h-[80vh] flex items-center">
+        <div className="relative w-full h-[65vh] md:h-[80vh] flex items-center overflow-hidden">
           <div className="absolute inset-0 bg-black">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img 
