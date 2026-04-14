@@ -27,6 +27,9 @@ export default function EpisodeList({ episodes, filmSlug }: EpisodeListProps) {
   if (!episodes || episodes.length === 0) return null;
 
   const currentServer = episodes[activeServer];
+  const uniqueEpisodes = currentServer.items.filter(
+    (episode, index, items) => index === items.findIndex((item) => item.slug === episode.slug)
+  );
 
   return (
     <div className="space-y-5">
@@ -57,9 +60,9 @@ export default function EpisodeList({ episodes, filmSlug }: EpisodeListProps) {
 
       {/* Episode Grid */}
       <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-12 gap-2">
-        {currentServer.items.map((ep) => (
+        {uniqueEpisodes.map((ep, index) => (
           <Link
-            key={ep.slug}
+            key={`${activeServer}-${ep.slug}-${index}`}
             href={`/xem/${filmSlug}?tap=${ep.slug}&sv=${activeServer}`}
             className="group flex items-center justify-center gap-1 px-2 py-2.5 rounded-lg bg-zinc-800/60 border border-white/5 text-sm text-zinc-300 hover:bg-amber-500 hover:text-black hover:border-amber-500 hover:shadow-lg hover:shadow-amber-500/20 transition-all font-medium"
           >

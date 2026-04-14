@@ -1,5 +1,6 @@
 import { getPhimTheoDanhSach, getPhimMoi } from "@/lib/api";
 import MovieCard from "@/components/movie/MovieCard";
+import ListingFilters from "@/components/movie/ListingFilters";
 import Pagination from "@/components/movie/Pagination";
 import { Film } from "lucide-react";
 import { notFound } from "next/navigation";
@@ -22,6 +23,7 @@ const DANH_SACH_TITLES: Record<string, string> = {
   "phim-bo-dang-chieu": "Phim Bộ Đang Chiếu",
   "phim-bo-hoan-thanh": "Phim Bộ Hoàn Thành",
   "phim-sap-chieu": "Phim Sắp Chiếu",
+  "tv-shows": "TV Shows",
   "subteam": "Subteam",
 };
 
@@ -67,7 +69,8 @@ export default async function DanhSachPage({ params, searchParams }: PageProps) 
         </p>
       </div>
 
-      {/* Grid */}
+      <ListingFilters currentCategory={slug} />
+
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-5">
         {data.items.map((movie) => (
           <MovieCard key={movie.slug} movie={movie} />

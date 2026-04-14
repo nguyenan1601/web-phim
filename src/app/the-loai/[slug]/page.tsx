@@ -1,5 +1,6 @@
 import { getPhimTheoTheLoai } from "@/lib/api";
 import MovieCard from "@/components/movie/MovieCard";
+import ListingFilters from "@/components/movie/ListingFilters";
 import Pagination from "@/components/movie/Pagination";
 import { Tag } from "lucide-react";
 import { notFound } from "next/navigation";
@@ -69,6 +70,8 @@ export default async function TheLoaiPage({ params, searchParams }: PageProps) {
           Trang {page} / {data.paginate.total_page} · Tổng {data.paginate.total_items} phim
         </p>
       </div>
+
+      <ListingFilters currentGenres={[slug]} />
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-5">
         {data.items.map((movie) => (

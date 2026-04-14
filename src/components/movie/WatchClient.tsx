@@ -47,6 +47,9 @@ export default function WatchClient({
   const [activeServer, setActiveServer] = useState(currentServerIdx);
 
   const currentServer = episodes[Math.min(activeServer, episodes.length - 1)];
+  const uniqueEpisodes = currentServer.items.filter(
+    (episode, index, items) => index === items.findIndex((item) => item.slug === episode.slug)
+  );
   const currentEp = currentServer.items.find((e) => e.slug === currentEpSlug) || currentServer.items[0];
 
   // Save watch history when user opens the watch page or episode changes
@@ -164,11 +167,11 @@ export default function WatchClient({
           Chọn tập
         </h3>
         <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-14 gap-2">
-          {currentServer.items.map((ep) => {
+          {uniqueEpisodes.map((ep, index) => {
             const isActive = ep.slug === currentEpSlug && activeServer === currentServerIdx;
             return (
               <Link
-                key={ep.slug}
+                key={`${activeServer}-${ep.slug}-${index}`}
                 href={`/xem/${filmSlug}?tap=${ep.slug}&sv=${activeServer}`}
                 className={`flex items-center justify-center gap-1 px-2 py-2.5 rounded-lg text-sm font-medium transition-all ${
                   isActive

@@ -169,3 +169,115 @@ export async function searchPhim(keyword: string): Promise<PhimResponse | null> 
     return null;
   }
 }
+
+export interface AdvancedFilterParams {
+  categorySlug?: string;
+  genreSlugs?: string[];
+  countrySlug?: string;
+  year?: string;
+  maxPagesPerFilter?: number;
+}
+
+function getCategoryPath(slug: string) {
+  if (slug === "phim-moi" || slug === "phim-moi-cap-nhat") {
+    return "/films/phim-moi-cap-nhat";
+  }
+
+  return `/films/danh-sach/${slug}`;
+}
+
+async function fetchFilmsByPath(path: string, maxPages: number): Promise<PhimItem[]> {
+  const movieMap = new Map<string, PhimItem>();
+  let totalPages = 1;
+
+  for (let page = 1; page <= totalPages && page <= maxPages; page += 1) {
+    try {
+      const res = await fetch(`${API_BASE}${path}?page=${page}`, {
+        next: { revalidate: 1800 },
+      });
+
+      if (!res.ok) break;
+
+      const data = (await res.json()) as PhimResponse;
+      totalPages = data.paginate?.total_page || 1;
+
+      for (const movie of data.items || []) {
+        if (!movieMap.has(movie.slug)) {
+          movieMap.set(movie.slug, movie);
+        }
+      }
+    } catch {
+      break;
+    }
+  }
+
+  return Array.from(movieMap.values());
+}
+
+export async function getPhimByAdvancedFilters(
+  params: AdvancedFilterParams
+): Promise<PhimItem[]> {
+  const maxPages = Math.max(1, Math.min(params.maxPagesPerFilter || 8, 20));
+  const datasets: PhimItem[][] = [];
+
+  if (params.categorySlug) {
+    datasets.push(await fetchFilmsByPath(getCategoryPath(params.categorySlug), maxPages));
+  }
+
+  const normalizedGenreSlugs = Array.from(
+    new Set((params.genreSlugs || []).map((item) => item.trim()).filter(Boolean))
+  );
+
+  if (normalizedGenreSlugs.length > 0) {
+    const genreDatasets = await Promise.all(
+      normalizedGenreSlugs.map((slug) => fetchFilmsByPath(`/films/the-loai/${slug}`, maxPages))
+    );
+    const genreUnionMap = new Map<string, PhimItem>();
+    for (const genreItems of genreDatasets) {
+      for (const movie of genreItems) {
+        genreUnionMap.set(movie.slug, movie);
+      }
+    }
+    datasets.push(Array.from(genreUnionMap.values()));
+  }
+
+  if (params.countrySlug) {
+    datasets.push(await fetchFilmsByPath(`/films/quoc-gia/${params.countrySlug}`, maxPages));
+  }
+
+  if (params.year) {
+    datasets.push(await fetchFilmsByPath(`/films/nam-phat-hanh/${params.year}`, maxPages));
+  }
+
+  if (datasets.length === 0) return [];
+
+  if (datasets.some((items) => items.length === 0)) return [];
+
+  const [firstSet, ...restSets] = datasets.map(
+    (items) => new Set(items.map((movie) => movie.slug))
+  );
+
+  const slugIntersection = Array.from(firstSet).filter((slug) =>
+    restSets.every((set) => set.has(slug))
+  );
+
+  const mergedMap = new Map<string, PhimItem>();
+  for (const dataset of datasets) {
+    for (const movie of dataset) {
+      if (!mergedMap.has(movie.slug)) {
+        mergedMap.set(movie.slug, movie);
+      }
+    }
+  }
+
+  const mergedItems = slugIntersection
+    .map((slug) => mergedMap.get(slug))
+    .filter((movie): movie is PhimItem => Boolean(movie))
+    .sort(
+      (a, b) =>
+        new Date(b.modified || b.created || 0).getTime() -
+        new Date(a.modified || a.created || 0).getTime()
+    );
+
+  return mergedItems;
+}
