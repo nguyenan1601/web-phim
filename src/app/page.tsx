@@ -27,6 +27,8 @@ export default async function Home() {
             <img 
               src={heroMovie.poster_url} 
               alt={heroMovie.name}
+              loading="eager"
+              fetchPriority="high"
               className="w-full h-full object-cover opacity-40 blur-[4px] scale-105"
             />
             <div className="absolute inset-0 bg-gradient-to-r from-black via-black/70 to-transparent" />

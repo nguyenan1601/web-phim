@@ -99,10 +99,10 @@ export default function ListingFilters({
 
   const genreDropdownLabel =
     genres.length === 1
-      ? genreLabelMap.get(genres[0]) || "Chọn một hoặc nhiều thể loại"
+      ? genreLabelMap.get(genres[0]) || "Thể loại"
       : genres.length > 1
         ? "Tùy chọn"
-        : "Chọn một hoặc nhiều thể loại";
+        : "Thể loại";
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -154,7 +154,7 @@ export default function ListingFilters({
         <span className="text-xs font-semibold uppercase tracking-[0.18em]">Bộ lọc nhanh</span>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="grid gap-2.5 md:grid-cols-2 lg:grid-cols-4">
         <label>
           <span className="mb-2 block text-xs font-medium uppercase tracking-wide text-zinc-400">
             Danh sách phim
@@ -162,7 +162,7 @@ export default function ListingFilters({
           <select
             value={category}
             onChange={(event) => setCategory(event.target.value)}
-            className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/10"
+            className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm text-white outline-none transition focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/10"
           >
             {CATEGORY_OPTIONS.map((option) => (
               <option key={option.label} value={option.slug}>
@@ -180,7 +180,7 @@ export default function ListingFilters({
             <button
               type="button"
               onClick={() => setIsGenreDropdownOpen((value) => !value)}
-              className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition hover:border-white/20 focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/10"
+              className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm text-white outline-none transition hover:border-white/20 focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/10"
             >
               <span className="truncate text-left">{genreDropdownLabel}</span>
               <ChevronDown
@@ -256,7 +256,7 @@ export default function ListingFilters({
           <select
             value={country}
             onChange={(event) => setCountry(event.target.value)}
-            className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/10"
+            className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm text-white outline-none transition focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/10"
           >
             {COUNTRY_OPTIONS.map((option) => (
               <option key={option.label} value={option.slug}>
@@ -273,7 +273,7 @@ export default function ListingFilters({
           <select
             value={year}
             onChange={(event) => setYear(event.target.value)}
-            className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/10"
+            className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm text-white outline-none transition focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/10"
           >
             {YEAR_OPTIONS.map((option) => (
               <option key={option.label} value={option.slug}>
