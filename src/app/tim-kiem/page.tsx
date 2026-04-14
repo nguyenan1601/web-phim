@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { Search, Film } from "lucide-react";
 import MovieCard from "@/components/movie/MovieCard";
-import { searchPhim } from "@/lib/api";
+import Pagination from "@/components/movie/Pagination";
+import { searchPhimAdvanced } from "@/lib/search";
 
 interface PageProps {
-  searchParams: Promise<{ keyword?: string }>;
+  searchParams: Promise<{ keyword?: string; page?: string }>;
 }
 
 export async function generateMetadata({ searchParams }: PageProps) {
@@ -24,11 +25,22 @@ export async function generateMetadata({ searchParams }: PageProps) {
   };
 }
 
+const PAGE_SIZE = 10;
+
 export default async function SearchPage({ searchParams }: PageProps) {
-  const { keyword } = await searchParams;
+  const params = await searchParams;
+  const keyword = params.keyword;
+  const pageParam = params.page;
+  
   const query = keyword?.trim() || "";
-  const data = query.length >= 2 ? await searchPhim(query) : null;
-  const items = data?.items || [];
+  const currentPage = Math.max(1, parseInt(pageParam || "1", 10) || 1);
+  
+  const allItems = query.length >= 2 ? await searchPhimAdvanced(query) : [];
+  const totalItems = allItems.length;
+  const totalPages = Math.ceil(totalItems / PAGE_SIZE);
+  
+  // Slice items for current page
+  const items = allItems.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   return (
     <div className="container mx-auto px-4 pt-24 pb-16 min-h-screen">
@@ -44,7 +56,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
           <p className="text-zinc-500 text-sm">
             Từ khóa: <span className="text-zinc-200 font-medium">{query}</span>
             {" · "}
-            Tìm thấy {items.length} kết quả
+            Tìm thấy {totalItems} kết quả {totalItems > PAGE_SIZE && `(Trang ${currentPage}/${totalPages})`}
           </p>
         ) : (
           <p className="text-zinc-500 text-sm">
@@ -59,14 +71,20 @@ export default async function SearchPage({ searchParams }: PageProps) {
           <p className="text-zinc-400">Từ khóa quá ngắn để tìm kiếm.</p>
         </div>
       ) : items.length > 0 ? (
-        <div className="space-y-6">
+        <div className="space-y-10">
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-5">
             {items.map((movie) => (
               <MovieCard key={movie.slug} movie={movie} />
             ))}
           </div>
 
-          <div className="text-sm text-zinc-500">
+          <Pagination 
+            currentPage={currentPage}
+            totalPages={totalPages}
+            baseUrl={`/tim-kiem?keyword=${encodeURIComponent(query)}`}
+          />
+
+          <div className="text-sm text-zinc-500 text-center">
             Không thấy phim phù hợp?{" "}
             <Link href="/" className="text-amber-400 hover:text-amber-300 transition-colors">
               Quay về trang chủ

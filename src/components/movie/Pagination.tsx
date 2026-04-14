@@ -5,30 +5,57 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface PaginationProps {
   currentPage: number;
-  totalPages: number;
+  totalPages?: number;
+  hasMore?: boolean;
   baseUrl: string;
 }
 
-export default function Pagination({ currentPage, totalPages, baseUrl }: PaginationProps) {
-  if (totalPages <= 1) return null;
+export default function Pagination({
+  currentPage,
+  totalPages = 0,
+  hasMore = false,
+  baseUrl,
+}: PaginationProps) {
+  // If no total pages and no hasMore, or only 1 page and no more, don't show
+  if ((totalPages <= 1 && !hasMore) && (currentPage <= 1)) return null;
 
   // Build visible page numbers with ellipsis logic
   const getPageNumbers = (): (number | "...")[] => {
     const pages: (number | "...")[] = [];
-    const delta = 2;
-    const left = Math.max(2, currentPage - delta);
-    const right = Math.min(totalPages - 1, currentPage + delta);
+    
+    if (totalPages > 0) {
+      const delta = 2;
+      const left = Math.max(2, currentPage - delta);
+      const right = Math.min(totalPages - 1, currentPage + delta);
 
-    pages.push(1);
-    if (left > 2) pages.push("...");
-    for (let i = left; i <= right; i++) pages.push(i);
-    if (right < totalPages - 1) pages.push("...");
-    if (totalPages > 1) pages.push(totalPages);
+      pages.push(1);
+      if (left > 2) pages.push("...");
+      for (let i = left; i <= right; i++) pages.push(i);
+      if (right < totalPages - 1) pages.push("...");
+      if (totalPages > 1) pages.push(totalPages);
+    } else {
+      // Fallback for when we don't know totalPages but have hasMore
+      // Show current page and potential next pages
+      const delta = 2;
+      const start = Math.max(1, currentPage - delta);
+      // We don't know the end, so we show up to current + delta if hasMore is true
+      const end = hasMore ? currentPage + delta : currentPage;
+      
+      for (let i = start; i <= end; i++) {
+        pages.push(i);
+      }
+      if (hasMore) pages.push("...");
+    }
 
     return pages;
   };
 
-  const pageUrl = (page: number) => `${baseUrl}?page=${page}`;
+  const pageUrl = (page: number) => {
+    const [path, queryString] = baseUrl.split("?");
+    const params = new URLSearchParams(queryString);
+    params.set("page", String(page));
+    return `${path}?${params.toString()}`;
+  };
 
   return (
     <div className="flex items-center justify-center gap-1.5 pt-10">
@@ -37,6 +64,7 @@ export default function Pagination({ currentPage, totalPages, baseUrl }: Paginat
         <Link
           href={pageUrl(currentPage - 1)}
           className="p-2.5 rounded-lg bg-zinc-800/50 border border-white/5 text-zinc-400 hover:text-amber-400 hover:border-amber-500/30 transition-all"
+          title="Trang trước"
         >
           <ChevronLeft className="w-4 h-4" />
         </Link>
@@ -68,10 +96,11 @@ export default function Pagination({ currentPage, totalPages, baseUrl }: Paginat
       )}
 
       {/* Next */}
-      {currentPage < totalPages ? (
+      {hasMore || (totalPages > 0 && currentPage < totalPages) ? (
         <Link
           href={pageUrl(currentPage + 1)}
           className="p-2.5 rounded-lg bg-zinc-800/50 border border-white/5 text-zinc-400 hover:text-amber-400 hover:border-amber-500/30 transition-all"
+          title="Trang sau"
         >
           <ChevronRight className="w-4 h-4" />
         </Link>
