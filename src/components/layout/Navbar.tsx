@@ -119,7 +119,7 @@ export default function Navbar({ user }: { user: User | null }) {
           >
             <Popcorn className="w-6 h-6 text-amber-400" />
             <span className="font-display">
-              Xem<span className="font-light">Phim</span>
+              XemPhim
             </span>
           </Link>
 

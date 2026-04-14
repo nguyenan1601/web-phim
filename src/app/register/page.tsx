@@ -22,7 +22,7 @@ export default async function RegisterPage({
           >
             <Popcorn className="w-8 h-8 text-amber-400" />
             <span className="font-display">
-              Xem<span className="font-light">Phim</span>
+              XemPhim
             </span>
           </Link>
           <h1 className="text-2xl font-display font-semibold text-white">
