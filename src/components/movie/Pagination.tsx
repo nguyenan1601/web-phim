@@ -34,14 +34,22 @@ export default function Pagination({
       if (right < totalPages - 1) pages.push("...");
       if (totalPages > 1) pages.push(totalPages);
     } else {
-      // Fallback for when we don't know totalPages but have hasMore
-      const delta = 3;
+      // Hỗ trợ trường hợp không biết chính xác tổng số trang (Bộ lọc nâng cao)
+      // Hiển thị dạng: 1 2 3 ... hoặc 1 ... 7 8 9 ...
+      const delta = 2;
       const start = Math.max(1, currentPage - delta);
       const end = hasMore ? currentPage + delta : currentPage;
-      
+
+      if (start > 1) {
+        pages.push(1);
+        if (start > 2) pages.push("...");
+      }
+
       for (let i = start; i <= end; i++) {
+        if (i === 1 && pages.includes(1)) continue;
         pages.push(i);
       }
+
       if (hasMore) pages.push("...");
     }
 
