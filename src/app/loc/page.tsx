@@ -130,6 +130,7 @@ export default async function AdvancedFilterPage({ searchParams }: FilterPagePro
 
             <Pagination 
               currentPage={currentPage}
+              totalPages={result.totalItems ? Math.ceil(result.totalItems / 10) : 0}
               hasMore={result.hasMore}
               baseUrl={paginationBaseUrl}
             />

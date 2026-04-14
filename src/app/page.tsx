@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getPhimMoi } from "@/lib/api";
+import { getPhimMoi, comparePhimItems } from "@/lib/api";
 import MovieCard from "@/components/movie/MovieCard";
 import ContinueWatching from "@/components/home/ContinueWatching";
 import { Sparkles, Play } from "lucide-react";
@@ -10,7 +10,7 @@ export const revalidate = 3600;
 export default async function Home() {
   // Fetch 2 pages to have enough items for a full grid
   const [page1, page2] = await Promise.all([getPhimMoi(1), getPhimMoi(2)]);
-  const phimMoi = [...(page1?.items || []), ...(page2?.items || [])];
+  const phimMoi = [...(page1?.items || []), ...(page2?.items || [])].sort(comparePhimItems);
   
   // Lấy 1 phim làm bộ phim nổi bật (Hero section)
   const heroMovie = phimMoi.length > 0 ? phimMoi[0] : null;

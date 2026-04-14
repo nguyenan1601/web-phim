@@ -16,6 +16,71 @@ export interface PhimItem {
   language: string;
   director: string;
   casts: string | null;
+  // Bổ sung dữ liệu category để trích xuất năm, thể loại chính xác hơn
+  category?: Record<string, { 
+    group: { id: string; name: string }; 
+    list: { id: string; name: string }[] 
+  }>;
+}
+
+/**
+ * Trích xuất năm phát hành từ tên phim hoặc URL hình ảnh
+ */
+export function extractYearFromMovie(item: PhimItem): number {
+  if (!item) return 0;
+
+  // 1. Ưu tiên: Trích xuất từ dữ liệu 'category' chính thức (Nhóm 'Năm')
+  if (item.category) {
+    for (const key in item.category) {
+      const group = item.category[key];
+      if (group.group?.name?.toLowerCase().includes("năm")) {
+        const yearStr = group.list?.[0]?.name;
+        if (yearStr) {
+          const year = parseInt(yearStr, 10);
+          if (!isNaN(year)) return year;
+        }
+      }
+    }
+  }
+  
+  // 2. Fallback: Tìm năm trong ngoặc đơn (2024)
+  const parenMatch = item.name.match(/\((\d{4})\)/) || item.original_name.match(/\((\d{4})\)/);
+  if (parenMatch) return parseInt(parenMatch[1], 10);
+
+  // 3. Fallback: Tìm năm trong URL hình ảnh (ví dụ: ...-2024-thumb.jpg)
+  const urlMatch = item.thumb_url?.match(/[-_](\d{4})[-_]/) || item.poster_url?.match(/[-_](\d{4})[-_]/);
+  if (urlMatch) return parseInt(urlMatch[1], 10);
+
+  // 4. Fallback: Tìm năm 4 chữ số (19xx hoặc 20xx) trong tên
+  const textMatch = item.name.match(/\b(19|20)\d{2}\b/) || item.original_name.match(/\b(19|20)\d{2}\b/);
+  if (textMatch) return parseInt(textMatch[0], 10);
+
+  return 0;
+}
+
+/**
+ * Hàm so sánh phim: Mới cập nhật (modified) > Mới tạo (created) > Năm phát hành
+ */
+export function comparePhimItems(a: PhimItem, b: PhimItem): number {
+  const modA = new Date(a.modified || 0).getTime();
+  const modB = new Date(b.modified || 0).getTime();
+
+  // 1. So sánh ngày cập nhật (modified) - Giảm dần
+  if (modB !== modA) {
+    return modB - modA;
+  }
+
+  // 2. Tiêu chuẩn thứ hai: Năm phát hành trích xuất được (Year) - Giảm dần
+  const yearA = extractYearFromMovie(a);
+  const yearB = extractYearFromMovie(b);
+  if (yearB !== yearA) {
+    return yearB - yearA;
+  }
+
+  // 3. Tiêu chí cuối cùng: Ngày tạo (created) - Giảm dần
+  const creA = new Date(a.created || 0).getTime();
+  const creB = new Date(b.created || 0).getTime();
+  return creB - creA;
 }
 
 export interface PhimResponse {
@@ -64,7 +129,11 @@ export async function getPhimMoi(page: number = 1): Promise<PhimResponse | null>
       next: { revalidate: 3600 },
     });
     if (!res.ok) throw new Error("Fetch failed");
-    return await res.json();
+    const data = await res.json();
+    if (data && data.items) {
+      data.items.sort(comparePhimItems);
+    }
+    return data;
   } catch (error) {
     console.error("Error fetching Phim Moi:", error);
     return null;
@@ -80,7 +149,11 @@ export async function getPhimTheoDanhSach(
       next: { revalidate: 3600 },
     });
     if (!res.ok) throw new Error("Fetch failed");
-    return await res.json();
+    const data = await res.json();
+    if (data && data.items) {
+      data.items.sort(comparePhimItems);
+    }
+    return data;
   } catch (error) {
     console.error(`Error fetching Danh Sach ${slug}:`, error);
     return null;
@@ -100,7 +173,11 @@ export async function getPhimTheoTheLoai(
       console.warn(`Fetch failed for genre ${slug}: ${res.status}`);
       return null;
     }
-    return await res.json();
+    const data = await res.json();
+    if (data && data.items) {
+      data.items.sort(comparePhimItems);
+    }
+    return data;
   } catch (error) {
     console.error(`Error fetching The Loai ${slug}:`, error);
     return null;
@@ -116,7 +193,11 @@ export async function getPhimTheoQuocGia(
       next: { revalidate: 86400 },
     });
     if (!res.ok) throw new Error("Fetch failed");
-    return await res.json();
+    const data = await res.json();
+    if (data && data.items) {
+      data.items.sort(comparePhimItems);
+    }
+    return data;
   } catch (error) {
     console.error(`Error fetching Quoc Gia ${slug}:`, error);
     return null;
@@ -132,7 +213,11 @@ export async function getPhimTheoNam(
       next: { revalidate: 86400 },
     });
     if (!res.ok) throw new Error("Fetch failed");
-    return await res.json();
+    const data = await res.json();
+    if (data && data.items) {
+      data.items.sort(comparePhimItems);
+    }
+    return data;
   } catch (error) {
     console.error(`Error fetching Nam ${year}:`, error);
     return null;
@@ -191,6 +276,7 @@ export interface AdvancedFilterParams {
 export interface AdvancedFilterPageResult {
   items: PhimItem[];
   hasMore: boolean;
+  totalItems?: number;
 }
 
 interface FilterSource {
@@ -420,11 +506,7 @@ export async function getPhimByAdvancedFilters(
 
   if (onlyGenresSelected) {
     const genreItems = await fetchUnionByGenres(normalizedGenreSlugs, maxPages);
-    return genreItems.sort(
-      (a, b) =>
-        new Date(b.modified || b.created || 0).getTime() -
-        new Date(a.modified || a.created || 0).getTime()
-    );
+    return genreItems.sort(comparePhimItems);
   }
 
   const candidateSources: FilterSource[] = [];
@@ -512,11 +594,7 @@ export async function getPhimByAdvancedFilters(
     );
 
   if (!needsCategoryCheck && !needsCountryCheck && !needsYearCheck && !needsGenreCheck) {
-    return baseMovies.sort(
-      (a, b) =>
-        new Date(b.modified || b.created || 0).getTime() -
-        new Date(a.modified || a.created || 0).getTime()
-    );
+    return baseMovies.sort(comparePhimItems);
   }
 
   const filteredMovies: PhimItem[] = [];
@@ -547,11 +625,7 @@ export async function getPhimByAdvancedFilters(
     );
   }
 
-  return filteredMovies.sort(
-    (a, b) =>
-      new Date(b.modified || b.created || 0).getTime() -
-      new Date(a.modified || a.created || 0).getTime()
-  );
+  return filteredMovies.sort(comparePhimItems);
 }
 
 export async function getPhimByAdvancedFiltersPage(
@@ -582,6 +656,7 @@ export async function getPhimByAdvancedFiltersPage(
     return {
       items: allItems.slice(startIndex, endIndexExclusive),
       hasMore: allItems.length > endIndexExclusive,
+      totalItems: allItems.length,
     };
   }
 
@@ -645,28 +720,18 @@ export async function getPhimByAdvancedFiltersPage(
       current.totalItems < smallest.totalItems ? current : smallest
     );
 
-  let baseMovies = await fetchFilmsFromPreview(basePreview, maxPages);
-
   const needsCategoryCheck =
     Boolean(params.categorySlug) &&
     !(basePreview.source.kind === "category" && basePreview.source.slug === params.categorySlug);
 
-  if (needsCategoryCheck && params.categorySlug) {
-    baseMovies = baseMovies.filter((movie) => matchesCategoryFromItem(movie, params.categorySlug!));
-  }
-
-  baseMovies = baseMovies.sort(
-    (a, b) =>
-      new Date(b.modified || b.created || 0).getTime() -
-      new Date(a.modified || a.created || 0).getTime()
-  );
-
   const needsCountryCheck =
     Boolean(params.countrySlug) &&
     !(basePreview.source.kind === "country" && basePreview.source.slug === params.countrySlug);
+    
   const needsYearCheck =
     Boolean(params.year) &&
     !(basePreview.source.kind === "year" && basePreview.source.slug === params.year);
+    
   const needsGenreCheck =
     normalizedGenreSlugs.length > 0 &&
     !(
@@ -675,47 +740,92 @@ export async function getPhimByAdvancedFiltersPage(
       basePreview.source.slug === normalizedGenreSlugs[0]
     );
 
+  const needsDetailCheck = needsCountryCheck || needsGenreCheck;
+
+  // Trả về ngay nếu không cần kiểm tra thêm điều kiện nào
   if (!needsCategoryCheck && !needsCountryCheck && !needsYearCheck && !needsGenreCheck) {
+    let baseMovies = await fetchFilmsFromPreview(basePreview, maxPages);
+    baseMovies = baseMovies.sort(comparePhimItems);
     return {
       items: baseMovies.slice(startIndex, endIndexExclusive),
       hasMore: baseMovies.length > endIndexExclusive,
+      totalItems: basePreview.totalItems,
     };
   }
 
+  // Thuật toán: Lazy / Chunked Fetching để tăng tốc tối đa
+  // Thay vì tải toàn bộ phim và gọi Detail, chúng ta duyệt API gốc theo từng cụm (chunk)
   const matchedMovies: PhimItem[] = [];
+  let currentUpstreamPage = 1;
+  const CHUNK_SIZE = 4; // Tải 4 trang API (~40 phim) mỗi lần quét
+  let hitLimit = false;
 
-  for (let index = 0; index < baseMovies.length; index += 10) {
-    const batch = baseMovies.slice(index, index + 10);
-    const batchResults = await Promise.all(
-      batch.map(async (movie) => {
-        const detailResponse = await getPhimDetail(movie.slug, { silent: true });
-        if (!detailResponse?.movie) {
+  while (matchedMovies.length < endIndexExclusive && currentUpstreamPage <= maxPages && currentUpstreamPage <= basePreview.totalPages) {
+    // 1. Tải danh sách phim cơ bản theo cụm
+    const pagesToFetch = [];
+    for (let i = 0; i < CHUNK_SIZE && currentUpstreamPage <= basePreview.totalPages && currentUpstreamPage <= maxPages; i++, currentUpstreamPage++) {
+      pagesToFetch.push(currentUpstreamPage);
+    }
+    
+    if (pagesToFetch.length === 0) break;
+
+    const pagesData = await Promise.all(
+      pagesToFetch.map(p => p === 1 ? { items: basePreview.items } : fetchFilmPage(basePreview.source.path, p))
+    );
+
+    // 2. Lọc sơ bộ (Pre-filter) bằng dữ liệu cơ bản để tránh gọi API Detail không cần thiết
+    let candidates: PhimItem[] = [];
+    for (const data of pagesData) {
+      if (!data || !data.items) continue;
+      
+      const filtered = data.items.filter(movie => {
+        if (needsCategoryCheck && params.categorySlug && !matchesCategoryFromItem(movie, params.categorySlug)) return false;
+        
+        if (needsYearCheck && params.year) {
+          const year = extractYearFromMovie(movie);
+          if (year !== 0 && year.toString() !== params.year) return false;
+        }
+        return true;
+      });
+      candidates.push(...filtered);
+    }
+
+    if (candidates.length === 0) continue;
+
+    // 3. Nếu không cần kiểm tra Detail (chỉ lọc Category và Update Year), lưu kết quả ngay
+    if (!needsDetailCheck) {
+      matchedMovies.push(...candidates);
+      continue;
+    }
+
+    // 4. Gọi API Detail song song cho các candidate còn lại để kiểm tra Thể loại / Quốc gia
+    const batchDetails = await Promise.all(
+      candidates.map(async (movie) => {
+        try {
+          const detailResponse = await getPhimDetail(movie.slug, { silent: true });
+          if (!detailResponse?.movie) return null;
+
+          if (matchesAdvancedDetailFilters(movie, detailResponse.movie, params, normalizedGenreSlugs, basePreview.source)) {
+            return { ...movie, category: detailResponse.movie.category };
+          }
+        } catch {
           return null;
         }
-
-        return matchesAdvancedDetailFilters(
-          movie,
-          detailResponse.movie,
-          params,
-          normalizedGenreSlugs,
-          basePreview.source
-        )
-          ? movie
-          : null;
+        return null;
       })
     );
 
-    matchedMovies.push(
-      ...batchResults.filter((movie): movie is PhimItem => Boolean(movie))
-    );
-
-    if (matchedMovies.length > endIndexExclusive) {
-      break;
+    for (const m of batchDetails) {
+      if (m) matchedMovies.push(m);
     }
   }
 
+  // Cập nhật lại sắp xếp (API gốc đã sắp xếp hờ theo ngày cập nhật, nhưng cần sort lại chính xác)
+  const finalSortedMovies = matchedMovies.sort(comparePhimItems);
+
   return {
-    items: matchedMovies.slice(startIndex, endIndexExclusive),
-    hasMore: matchedMovies.length > endIndexExclusive,
+    items: finalSortedMovies.slice(startIndex, endIndexExclusive),
+    hasMore: finalSortedMovies.length > endIndexExclusive || (currentUpstreamPage <= basePreview.totalPages && currentUpstreamPage <= maxPages),
+    totalItems: basePreview.totalItems,
   };
 }

@@ -1,4 +1,4 @@
-import type { PhimItem, PhimResponse } from "@/lib/api";
+import { PhimItem, PhimResponse, comparePhimItems } from "@/lib/api";
 
 const API_BASE = "https://phim.nguonc.com/api";
 const LOCAL_POOL_TTL_MS = 1000 * 60 * 30;
@@ -275,10 +275,7 @@ export async function searchPhimAdvanced(keyword: string) {
         return right.score - left.score;
       }
 
-      return (
-        new Date(right.item.modified || right.item.created || 0).getTime() -
-        new Date(left.item.modified || left.item.created || 0).getTime()
-      );
+      return comparePhimItems(left.item, right.item);
     })
     .map((entry) => entry.item);
 }
