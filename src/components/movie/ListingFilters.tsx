@@ -279,7 +279,7 @@ export default function ListingFilters({
             onChange={(event) => setYear(event.target.value)}
             inputMode="numeric"
             pattern="[0-9]*"
-            placeholder="Khác (vui lòng nhập năm)"
+            placeholder="Vui lòng nhập năm"
             className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm text-white outline-none transition placeholder:text-zinc-500 focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/10"
           />
           <datalist id="filter-year-options">
