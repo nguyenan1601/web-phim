@@ -105,7 +105,7 @@ export default function Navbar({ user }: { user: User | null }) {
   return (
     <>
       <header
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        className={`fixed top-0 left-0 right-0 z-50 overflow-x-clip transition-all duration-300 ${
           isScrolled
             ? "bg-black/90 backdrop-blur-lg border-b border-white/10 shadow-lg shadow-black/20"
             : "bg-gradient-to-b from-black/80 to-transparent"
@@ -145,7 +145,7 @@ export default function Navbar({ user }: { user: User | null }) {
                 Thể loại <ChevronDown className="w-4 h-4 transition-transform group-hover:rotate-180" />
               </button>
               <div className="absolute top-full left-0 pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
-                <div className="w-[480px] bg-black/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden p-3 grid grid-cols-3 gap-1">
+                <div className="w-[480px] max-w-[calc(100vw-2rem)] bg-black/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden p-3 grid grid-cols-3 gap-1">
                   {CATEGORIES.map((item) => (
                     <Link
                       key={item.href}
@@ -165,7 +165,7 @@ export default function Navbar({ user }: { user: User | null }) {
                 Quốc gia <ChevronDown className="w-4 h-4 transition-transform group-hover:rotate-180" />
               </button>
               <div className="absolute top-full left-0 pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
-                <div className="w-[420px] bg-black/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden p-3 grid grid-cols-3 gap-1">
+                <div className="w-[420px] max-w-[calc(100vw-2rem)] bg-black/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden p-3 grid grid-cols-3 gap-1">
                   {COUNTRIES.map((item) => (
                     <Link
                       key={item.href}
@@ -185,7 +185,7 @@ export default function Navbar({ user }: { user: User | null }) {
                 Năm <ChevronDown className="w-4 h-4 transition-transform group-hover:rotate-180" />
               </button>
               <div className="absolute top-full right-0 lg:left-auto pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
-                <div className="w-[320px] bg-black/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden p-3 grid grid-cols-4 gap-1">
+                <div className="w-[320px] max-w-[calc(100vw-2rem)] bg-black/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden p-3 grid grid-cols-4 gap-1">
                   {YEARS.map((item) => (
                     <Link
                       key={item.href}

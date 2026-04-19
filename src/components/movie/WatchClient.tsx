@@ -147,7 +147,7 @@ export default function WatchClient({
             <button
               key={idx}
               onClick={() => setActiveServer(idx)}
-              className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              className={`inline-flex max-w-full items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                 idx === activeServer
                   ? "bg-amber-500 text-black shadow-lg shadow-amber-500/20"
                   : "bg-zinc-800/60 border border-white/5 text-zinc-400 hover:text-white hover:border-amber-500/30"
@@ -173,7 +173,7 @@ export default function WatchClient({
               <Link
                 key={`${activeServer}-${ep.slug}-${index}`}
                 href={`/xem/${filmSlug}?tap=${ep.slug}&sv=${activeServer}`}
-                className={`flex items-center justify-center gap-1 px-2 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                className={`min-w-0 truncate flex items-center justify-center gap-1 px-2 py-2.5 rounded-lg text-sm font-medium transition-all ${
                   isActive
                     ? "bg-amber-500 text-black shadow-lg shadow-amber-500/25 ring-2 ring-amber-400/50"
                     : "bg-zinc-800/60 border border-white/5 text-zinc-300 hover:bg-amber-500 hover:text-black hover:border-amber-500"

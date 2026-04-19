@@ -83,10 +83,10 @@ export default async function RootLayout({
       lang="vi"
       className={`${outfit.variable} ${inter.variable} antialiased dark`}
     >
-      <body className="min-h-screen flex flex-col font-sans bg-black text-white selection:bg-amber-500/30">
+      <body className="min-h-screen flex flex-col overflow-x-hidden font-sans bg-black text-white selection:bg-amber-500/30">
         <Navbar user={user} />
         <HistorySync userId={user?.id} />
-        <main className="flex-1 flex flex-col pt-16">{children}</main>
+        <main className="flex-1 flex flex-col overflow-x-hidden pt-16">{children}</main>
         <Footer />
         <Toaster />
       </body>
