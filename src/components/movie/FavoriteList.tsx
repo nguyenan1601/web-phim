@@ -1,13 +1,22 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import MovieCard from "./MovieCard";
+import { PhimItem } from "@/lib/api";
 import { removeFavoriteAction } from "@/app/actions/favorites";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
+interface FavoriteItem {
+  id: string | number;
+  movie_slug: string;
+  movie_name: string;
+  movie_thumb: string;
+}
+
 interface FavoriteListProps {
-  initialFavorites: any[];
+  initialFavorites: FavoriteItem[];
 }
 
 export default function FavoriteList({ initialFavorites }: FavoriteListProps) {
@@ -39,12 +48,12 @@ export default function FavoriteList({ initialFavorites }: FavoriteListProps) {
         <p className="text-zinc-500 text-lg mb-6">
           Bạn chưa yêu thích bộ phim nào.
         </p>
-        <a
+        <Link
           href="/"
           className="px-6 py-2.5 bg-zinc-800 text-white rounded-xl hover:bg-zinc-700 transition-all font-medium"
         >
           Khám phá phim ngay
-        </a>
+        </Link>
       </div>
     );
   }
@@ -69,7 +78,7 @@ export default function FavoriteList({ initialFavorites }: FavoriteListProps) {
                   original_name: "",
                   quality: "HD",
                   current_episode: "Full",
-                } as any
+                } as PhimItem
               }
               onRemove={handleRemove}
             />
