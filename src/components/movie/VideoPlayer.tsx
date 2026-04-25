@@ -36,10 +36,6 @@ export default function VideoPlayer({ embedUrl }: VideoPlayerProps) {
         referrerPolicy="no-referrer"
       />
 
-      {/* Note for User: SAMEORIGIN block warning */}
-      <div className="absolute bottom-2 left-2 pointer-events-none">
-        <p className="text-[10px] text-white/20">Using Embed Player</p>
-      </div>
     </div>
   );
 }
