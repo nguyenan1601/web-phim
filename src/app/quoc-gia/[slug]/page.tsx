@@ -1,7 +1,7 @@
 import { getPhimTheoQuocGia } from "@/lib/api";
-import MovieCard from "@/components/movie/MovieCard";
-import ListingFilters from "@/components/movie/ListingFilters";
-import Pagination from "@/components/movie/Pagination";
+import MovieCard from "@/components/ui/movie/MovieCard";
+import ListingFilters from "@/components/ui/movie/ListingFilters";
+import Pagination from "@/components/ui/movie/Pagination";
 import { Globe } from "lucide-react";
 import { notFound } from "next/navigation";
 
@@ -16,13 +16,13 @@ const QUOC_GIA_TITLES: Record<string, string> = {
   "dai-loan": "Đài Loan",
   "hong-kong": "Hồng Kông",
   "an-do": "Ấn Độ",
-  "anh": "Anh",
-  "phap": "Pháp",
-  "duc": "Đức",
-  "brazil": "Brazil",
+  anh: "Anh",
+  phap: "Pháp",
+  duc: "Đức",
+  brazil: "Brazil",
   "viet-nam": "Việt Nam",
-  "philippines": "Philippines",
-  "indonesia": "Indonesia",
+  philippines: "Philippines",
+  indonesia: "Indonesia",
   "quoc-gia-khac": "Quốc Gia Khác",
 };
 
@@ -60,7 +60,8 @@ export default async function QuocGiaPage({ params, searchParams }: PageProps) {
           </h1>
         </div>
         <p className="text-zinc-500 text-sm">
-          Trang {page} / {data.paginate.total_page} · Tổng {data.paginate.total_items} phim
+          Trang {page} / {data.paginate.total_page} · Tổng{" "}
+          {data.paginate.total_items} phim
         </p>
       </div>
 

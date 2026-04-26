@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { Film, Search } from "lucide-react";
-import MovieCard from "@/components/movie/MovieCard";
-import ListingFilters from "@/components/movie/ListingFilters";
-import Pagination from "@/components/movie/Pagination";
+import MovieCard from "@/components/ui/movie/MovieCard";
+import ListingFilters from "@/components/ui/movie/ListingFilters";
+import Pagination from "@/components/ui/movie/Pagination";
 import { getPhimByAdvancedFiltersPage } from "@/lib/api";
 
 interface FilterPageProps {
@@ -28,19 +28,20 @@ export async function generateMetadata({ searchParams }: FilterPageProps) {
     Boolean(params.nam);
 
   return {
-    title: hasAnyFilter ? "Kết quả lọc phim | XemPhim" : "Lọc phim nâng cao | XemPhim",
-    description: "Tìm phim theo nhiều tiêu chí kết hợp: danh sách, thể loại, quốc gia và năm.",
+    title: hasAnyFilter
+      ? "Kết quả lọc phim | XemPhim"
+      : "Lọc phim nâng cao | XemPhim",
+    description:
+      "Tìm phim theo nhiều tiêu chí kết hợp: danh sách, thể loại, quốc gia và năm.",
   };
 }
 
-function buildPageHref(
-  params: {
-    categorySlug: string;
-    genreSlugs: string[];
-    countrySlug: string;
-    year: string;
-  }
-) {
+function buildPageHref(params: {
+  categorySlug: string;
+  genreSlugs: string[];
+  countrySlug: string;
+  year: string;
+}) {
   const query = new URLSearchParams();
 
   if (params.categorySlug) {
@@ -63,7 +64,9 @@ function buildPageHref(
   return queryString ? `/loc?${queryString}` : "/loc";
 }
 
-export default async function AdvancedFilterPage({ searchParams }: FilterPageProps) {
+export default async function AdvancedFilterPage({
+  searchParams,
+}: FilterPageProps) {
   const params = await searchParams;
   const categorySlug = params["danh-sach"]?.trim() || "";
   const genreSlugs = (params["the-loai"] || "")
@@ -74,7 +77,9 @@ export default async function AdvancedFilterPage({ searchParams }: FilterPagePro
   const year = params.nam?.trim() || "";
   const currentPage = Math.max(1, Number.parseInt(params.page || "1", 10) || 1);
 
-  const hasAnyFilter = Boolean(categorySlug || genreSlugs.length > 0 || countrySlug || year);
+  const hasAnyFilter = Boolean(
+    categorySlug || genreSlugs.length > 0 || countrySlug || year,
+  );
 
   const result = hasAnyFilter
     ? await getPhimByAdvancedFiltersPage(
@@ -85,7 +90,7 @@ export default async function AdvancedFilterPage({ searchParams }: FilterPagePro
           year: year || undefined,
         },
         currentPage,
-        PAGE_SIZE
+        PAGE_SIZE,
       )
     : { items: [], hasMore: false };
 
@@ -128,16 +133,21 @@ export default async function AdvancedFilterPage({ searchParams }: FilterPagePro
               ))}
             </div>
 
-            <Pagination 
+            <Pagination
               currentPage={currentPage}
-              totalPages={result.totalItems ? Math.ceil(result.totalItems / 10) : 0}
+              totalPages={
+                result.totalItems ? Math.ceil(result.totalItems / 10) : 0
+              }
               hasMore={result.hasMore}
               baseUrl={paginationBaseUrl}
             />
-            
+
             <div className="text-sm text-zinc-500 text-center">
               Không thấy phim phù hợp?{" "}
-              <Link href="/" className="text-amber-400 hover:text-amber-300 transition-colors">
+              <Link
+                href="/"
+                className="text-amber-400 hover:text-amber-300 transition-colors"
+              >
                 Quay về trang chủ
               </Link>
             </div>
@@ -156,7 +166,9 @@ export default async function AdvancedFilterPage({ searchParams }: FilterPagePro
       ) : (
         <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.03] px-6 py-16 text-center">
           <Film className="mx-auto mb-3 h-10 w-10 text-zinc-600" />
-          <p className="text-base font-semibold text-white">Chưa có tiêu chí lọc.</p>
+          <p className="text-base font-semibold text-white">
+            Chưa có tiêu chí lọc.
+          </p>
           <p className="mt-2 text-sm text-zinc-400">
             Chọn ít nhất một điều kiện ở bộ lọc phía trên để bắt đầu.
           </p>

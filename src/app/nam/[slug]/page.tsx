@@ -1,7 +1,7 @@
 import { getPhimTheoNam } from "@/lib/api";
-import MovieCard from "@/components/movie/MovieCard";
-import ListingFilters from "@/components/movie/ListingFilters";
-import Pagination from "@/components/movie/Pagination";
+import MovieCard from "@/components/ui/movie/MovieCard";
+import ListingFilters from "@/components/ui/movie/ListingFilters";
+import Pagination from "@/components/ui/movie/Pagination";
 import { Calendar } from "lucide-react";
 import { notFound } from "next/navigation";
 
@@ -38,7 +38,8 @@ export default async function NamPhimPage({ params, searchParams }: PageProps) {
           </h1>
         </div>
         <p className="text-zinc-500 text-sm">
-          Trang {page} / {data.paginate.total_page} · Tổng {data.paginate.total_items} phim
+          Trang {page} / {data.paginate.total_page} · Tổng{" "}
+          {data.paginate.total_items} phim
         </p>
       </div>
 
@@ -52,7 +53,9 @@ export default async function NamPhimPage({ params, searchParams }: PageProps) {
         </div>
       ) : (
         <div className="text-center py-20 bg-white/5 rounded-2xl border border-white/10">
-          <p className="text-zinc-400">Không tìm thấy phim nào phát hành trong năm này.</p>
+          <p className="text-zinc-400">
+            Không tìm thấy phim nào phát hành trong năm này.
+          </p>
         </div>
       )}
 

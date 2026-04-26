@@ -1,7 +1,7 @@
 import { getPhimTheoDanhSach, getPhimMoi } from "@/lib/api";
-import MovieCard from "@/components/movie/MovieCard";
-import ListingFilters from "@/components/movie/ListingFilters";
-import Pagination from "@/components/movie/Pagination";
+import MovieCard from "@/components/ui/movie/MovieCard";
+import ListingFilters from "@/components/ui/movie/ListingFilters";
+import Pagination from "@/components/ui/movie/Pagination";
 import { Film } from "lucide-react";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
@@ -24,7 +24,7 @@ const DANH_SACH_TITLES: Record<string, string> = {
   "phim-bo-hoan-thanh": "Phim Bộ Hoàn Thành",
   "phim-sap-chieu": "Phim Sắp Chiếu",
   "tv-shows": "TV Shows",
-  "subteam": "Subteam",
+  subteam: "Subteam",
 };
 
 interface PageProps {
@@ -32,7 +32,9 @@ interface PageProps {
   searchParams: Promise<{ page?: string }>;
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
   const { slug } = await params;
   const title = DANH_SACH_TITLES[slug] || "Danh Sách Phim";
   return {
@@ -41,15 +43,19 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-export default async function DanhSachPage({ params, searchParams }: PageProps) {
+export default async function DanhSachPage({
+  params,
+  searchParams,
+}: PageProps) {
   const { slug } = await params;
   const { page: pageParam } = await searchParams;
   const page = parseInt(pageParam || "1", 10);
 
   // Special case: "phim-moi" and "phim-moi-cap-nhat" uses the same API endpoint
-  const data = (slug === "phim-moi" || slug === "phim-moi-cap-nhat")
-    ? await getPhimMoi(page)
-    : await getPhimTheoDanhSach(slug, page);
+  const data =
+    slug === "phim-moi" || slug === "phim-moi-cap-nhat"
+      ? await getPhimMoi(page)
+      : await getPhimTheoDanhSach(slug, page);
   if (!data || !data.items || data.items.length === 0) return notFound();
 
   const title = DANH_SACH_TITLES[slug] || slug;
@@ -65,7 +71,8 @@ export default async function DanhSachPage({ params, searchParams }: PageProps) 
           </h1>
         </div>
         <p className="text-zinc-500 text-sm">
-          Trang {page} / {data.paginate.total_page} · Tổng {data.paginate.total_items} phim
+          Trang {page} / {data.paginate.total_page} · Tổng{" "}
+          {data.paginate.total_items} phim
         </p>
       </div>
 

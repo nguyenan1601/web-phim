@@ -1,7 +1,7 @@
 import { getPhimTheoTheLoai } from "@/lib/api";
-import MovieCard from "@/components/movie/MovieCard";
-import ListingFilters from "@/components/movie/ListingFilters";
-import Pagination from "@/components/movie/Pagination";
+import MovieCard from "@/components/ui/movie/MovieCard";
+import ListingFilters from "@/components/ui/movie/ListingFilters";
+import Pagination from "@/components/ui/movie/Pagination";
 import { Tag } from "lucide-react";
 import { notFound } from "next/navigation";
 
@@ -67,7 +67,8 @@ export default async function TheLoaiPage({ params, searchParams }: PageProps) {
           </h1>
         </div>
         <p className="text-zinc-500 text-sm">
-          Trang {page} / {data.paginate.total_page} · Tổng {data.paginate.total_items} phim
+          Trang {page} / {data.paginate.total_page} · Tổng{" "}
+          {data.paginate.total_items} phim
         </p>
       </div>
 

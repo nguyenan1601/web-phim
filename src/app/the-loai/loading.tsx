@@ -1,4 +1,4 @@
-import { MovieGridSkeleton } from "@/components/movie/MovieSkeleton";
+import { MovieGridSkeleton } from "@/components/ui/movie/MovieSkeleton";
 
 export default function Loading() {
   return (
