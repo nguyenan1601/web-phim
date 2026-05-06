@@ -9,17 +9,17 @@ const LOCAL_SEARCH_SOURCES = [
 
 type SearchableMovie = PhimItem;
 
-let localPoolCache:
-  | {
-      expiresAt: number;
-      items: SearchableMovie[];
-    }
-  | null = null;
+let localPoolCache: {
+  expiresAt: number;
+  items: SearchableMovie[];
+} | null = null;
 
 function normalizeSearchValue(value: string | null | undefined) {
   return (value || "")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
     .toLowerCase()
     .trim();
 }
@@ -41,7 +41,10 @@ function levenshteinDistance(source: string, target: string) {
   if (!source.length) return target.length;
   if (!target.length) return source.length;
 
-  const previous = Array.from({ length: target.length + 1 }, (_, index) => index);
+  const previous = Array.from(
+    { length: target.length + 1 },
+    (_, index) => index,
+  );
   const current = new Array<number>(target.length + 1);
 
   for (let i = 1; i <= source.length; i += 1) {
@@ -52,7 +55,7 @@ function levenshteinDistance(source: string, target: string) {
       current[j] = Math.min(
         current[j - 1] + 1,
         previous[j] + 1,
-        previous[j - 1] + cost
+        previous[j - 1] + cost,
       );
     }
 
@@ -82,8 +85,11 @@ function hasFuzzyTokenMatch(queryTokens: string[], fieldValue: string) {
         return true;
       }
 
-      return levenshteinDistance(queryToken, fieldToken) <= getFuzzyAllowance(queryToken);
-    })
+      return (
+        levenshteinDistance(queryToken, fieldToken) <=
+        getFuzzyAllowance(queryToken)
+      );
+    }),
   );
 }
 
@@ -158,7 +164,10 @@ function scoreMovie(item: SearchableMovie, keyword: string) {
   return score;
 }
 
-async function fetchJson<T>(url: string, init?: RequestInit): Promise<T | null> {
+async function fetchJson<T>(
+  url: string,
+  init?: RequestInit,
+): Promise<T | null> {
   try {
     const res = await fetch(url, init);
     if (!res.ok) return null;
@@ -168,31 +177,68 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T | null> 
   }
 }
 
-async function fetchSearchPage(keyword: string) {
-  if (!keyword) return [];
+async function fetchSearchPage(keyword: string, page = 1) {
+  if (!keyword) return null;
 
-  const data = await fetchJson<PhimResponse>(
-    `${API_BASE}/films/search?keyword=${encodeURIComponent(keyword)}`,
-    { cache: "no-store" }
+  return fetchJson<PhimResponse>(
+    `${API_BASE}/films/search?keyword=${encodeURIComponent(keyword)}&page=${page}`,
+    { cache: "no-store" },
+  );
+}
+
+async function fetchSearchResults(keyword: string) {
+  const firstPage = await fetchSearchPage(keyword, 1);
+  if (!firstPage) return [];
+
+  const movieMap = new Map<string, SearchableMovie>();
+
+  for (const item of firstPage.items || []) {
+    if (item?.slug && !movieMap.has(item.slug)) {
+      movieMap.set(item.slug, item);
+    }
+  }
+
+  const totalPages = Math.min(firstPage.paginate?.total_page || 1, 5);
+  const remainingPages = Array.from(
+    { length: Math.max(totalPages - 1, 0) },
+    (_, index) => index + 2,
   );
 
-  return Array.isArray(data?.items) ? data.items : [];
+  const pageResults = await Promise.all(
+    remainingPages.map((page) => fetchSearchPage(keyword, page)),
+  );
+
+  for (const data of pageResults) {
+    for (const item of data?.items || []) {
+      if (item?.slug && !movieMap.has(item.slug)) {
+        movieMap.set(item.slug, item);
+      }
+    }
+  }
+
+  return Array.from(movieMap.values());
 }
 
 async function fetchMovieBySlug(slug: string) {
   if (!slug) return null;
 
-  const data = await fetchJson<{ movie?: SearchableMovie }>(`${API_BASE}/film/${slug}`, {
-    next: { revalidate: 3600 },
-  });
+  const data = await fetchJson<{ movie?: SearchableMovie }>(
+    `${API_BASE}/film/${slug}`,
+    {
+      next: { revalidate: 3600 },
+    },
+  );
 
   return data?.movie || null;
 }
 
 async function fetchListPage(path: string, page: number) {
-  const data = await fetchJson<PhimResponse>(`${API_BASE}${path}?page=${page}`, {
-    next: { revalidate: 3600 },
-  });
+  const data = await fetchJson<PhimResponse>(
+    `${API_BASE}${path}?page=${page}`,
+    {
+      next: { revalidate: 3600 },
+    },
+  );
 
   return Array.isArray(data?.items) ? data.items : [];
 }
@@ -236,9 +282,11 @@ export async function searchPhimAdvanced(keyword: string) {
 
   const normalizedKeyword = normalizeSearchValue(trimmedKeyword);
   const keywordSlug = slugifyKeyword(trimmedKeyword);
-  const queryVariants = Array.from(new Set([trimmedKeyword, normalizedKeyword].filter(Boolean)));
+  const queryVariants = Array.from(
+    new Set([trimmedKeyword, normalizedKeyword, keywordSlug].filter(Boolean)),
+  );
   const [searchResultsList, slugMovie, localPool] = await Promise.all([
-    Promise.all(queryVariants.map(fetchSearchPage)),
+    Promise.all(queryVariants.map(fetchSearchResults)),
     fetchMovieBySlug(keywordSlug),
     getLocalSearchPool(),
   ]);
