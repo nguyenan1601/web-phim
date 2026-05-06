@@ -2,6 +2,9 @@ import { PhimItem, PhimResponse, comparePhimItems } from "@/lib/api";
 
 const API_BASE = "https://phim.nguonc.com/api";
 const LOCAL_POOL_TTL_MS = 1000 * 60 * 30;
+const SEARCH_CACHE_TTL_MS = 1000 * 60 * 5;
+const FETCH_TIMEOUT_MS = 3000;
+const MAX_SEARCH_PAGES = 3;
 const LOCAL_SEARCH_SOURCES = [
   { path: "/films/quoc-gia/viet-nam", pages: 30 },
   { path: "/films/phim-moi-cap-nhat", pages: 20 },
@@ -13,6 +16,14 @@ let localPoolCache: {
   expiresAt: number;
   items: SearchableMovie[];
 } | null = null;
+
+const searchResultCache = new Map<
+  string,
+  {
+    expiresAt: number;
+    items: SearchableMovie[];
+  }
+>();
 
 function normalizeSearchValue(value: string | null | undefined) {
   return (value || "")
@@ -168,12 +179,20 @@ async function fetchJson<T>(
   url: string,
   init?: RequestInit,
 ): Promise<T | null> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
   try {
-    const res = await fetch(url, init);
+    const res = await fetch(url, {
+      ...init,
+      signal: controller.signal,
+    });
     if (!res.ok) return null;
     return (await res.json()) as T;
   } catch {
     return null;
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
@@ -198,7 +217,10 @@ async function fetchSearchResults(keyword: string) {
     }
   }
 
-  const totalPages = Math.min(firstPage.paginate?.total_page || 1, 5);
+  const totalPages = Math.min(
+    firstPage.paginate?.total_page || 1,
+    MAX_SEARCH_PAGES,
+  );
   const remainingPages = Array.from(
     { length: Math.max(totalPages - 1, 0) },
     (_, index) => index + 2,
@@ -280,7 +302,14 @@ export async function searchPhimAdvanced(keyword: string) {
     return [];
   }
 
-  const normalizedKeyword = normalizeSearchValue(trimmedKeyword);
+  const cacheKey = normalizeSearchValue(trimmedKeyword);
+  const cachedResult = searchResultCache.get(cacheKey);
+
+  if (cachedResult && cachedResult.expiresAt > Date.now()) {
+    return cachedResult.items;
+  }
+
+  const normalizedKeyword = cacheKey;
   const keywordSlug = slugifyKeyword(trimmedKeyword);
   const queryVariants = Array.from(
     new Set([trimmedKeyword, normalizedKeyword, keywordSlug].filter(Boolean)),
@@ -312,7 +341,7 @@ export async function searchPhimAdvanced(keyword: string) {
     }
   }
 
-  return Array.from(movieMap.values())
+  const items = Array.from(movieMap.values())
     .map((item) => ({
       item,
       score: scoreMovie(item, trimmedKeyword),
@@ -326,4 +355,11 @@ export async function searchPhimAdvanced(keyword: string) {
       return comparePhimItems(left.item, right.item);
     })
     .map((entry) => entry.item);
+
+  searchResultCache.set(cacheKey, {
+    items,
+    expiresAt: Date.now() + SEARCH_CACHE_TTL_MS,
+  });
+
+  return items;
 }
