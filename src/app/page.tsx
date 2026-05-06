@@ -44,7 +44,7 @@ export default async function Home() {
                 <span>NỔI BẬT HÔM NAY</span>
               </div>
 
-              <h1 className="text-[clamp(1.9rem,8vw,4.5rem)] font-bold tracking-[-0.055em] text-white shadow-sm font-display leading-[1.02] sm:leading-[1.06] text-balance">
+              <h1 className="text-[clamp(1.9rem,8vw,4.5rem)] font-extrabold tracking-[-0.025em] text-white shadow-sm font-display leading-[1.08] text-balance">
                 {heroMovie.name}
               </h1>
 

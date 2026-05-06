@@ -1,13 +1,14 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Outfit } from "next/font/google";
+import { Be_Vietnam_Pro, Inter } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 
-// Using Outfit for modern display text
-const outfit = Outfit({
-  variable: "--font-outfit",
-  subsets: ["latin"],
+// Using Be Vietnam Pro for Vietnamese-friendly display text
+const beVietnamPro = Be_Vietnam_Pro({
+  variable: "--font-be-vietnam-pro",
+  subsets: ["latin", "vietnamese"],
+  weight: ["600", "700", "800"],
 });
 
 // Using Inter for readable UI text
@@ -30,7 +31,14 @@ export const metadata: Metadata = {
   },
   description:
     "XemPhim - Kho phim khổng lồ hoàn toàn miễn phí. Phim mới cập nhật mỗi ngày, chất lượng HD, Vietsub. Trải nghiệm xem phim cao cấp không quảng cáo.",
-  keywords: ["xem phim", "phim moi", "phim hay", "phim hd", "phim vietsub", "xemphim"],
+  keywords: [
+    "xem phim",
+    "phim moi",
+    "phim hay",
+    "phim hd",
+    "phim vietsub",
+    "xemphim",
+  ],
   applicationName: "XemPhim",
   authors: [{ name: "XemPhim Team" }],
   creator: "XemPhim",
@@ -42,7 +50,8 @@ export const metadata: Metadata = {
     url: "https://phim.nguonc.com",
     siteName: "XemPhim",
     title: "XemPhim - Xem Phim Mới Cập Nhật Nhanh Nhất",
-    description: "XemPhim - Kho phim khổng lồ hoàn toàn miễn phí. Phim mới cập nhật mỗi ngày, chất lượng HD, Vietsub.",
+    description:
+      "XemPhim - Kho phim khổng lồ hoàn toàn miễn phí. Phim mới cập nhật mỗi ngày, chất lượng HD, Vietsub.",
     images: ["/og-image.png"],
   },
   twitter: {
@@ -76,17 +85,21 @@ export default async function RootLayout({
 }>) {
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   return (
     <html
       lang="vi"
-      className={`${outfit.variable} ${inter.variable} antialiased dark`}
+      className={`${beVietnamPro.variable} ${inter.variable} antialiased dark`}
     >
       <body className="min-h-screen flex flex-col overflow-x-hidden font-sans bg-black text-white selection:bg-amber-500/30">
         <Navbar user={user} />
         <HistorySync userId={user?.id} />
-        <main className="flex-1 flex flex-col overflow-x-hidden pt-16">{children}</main>
+        <main className="flex-1 flex flex-col overflow-x-hidden pt-16">
+          {children}
+        </main>
         <Footer />
         <Toaster />
       </body>
