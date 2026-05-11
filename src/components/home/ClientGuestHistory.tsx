@@ -80,10 +80,10 @@ export default function ClientGuestHistory({ serverHistory = [], userId }: Props
             <Link
               key={item.id || item.movie_slug}
               href={`/xem/${item.movie_slug}?tap=${item.episode_slug}`}
-              className="group relative flex gap-4 p-3 rounded-2xl bg-zinc-900/50 border border-white/5 hover:border-amber-500/30 hover:bg-zinc-900 transition-all overflow-hidden"
+              className="group relative flex gap-3 sm:gap-4 p-2.5 sm:p-3 rounded-2xl bg-zinc-900/50 border border-white/5 hover:border-amber-500/30 hover:bg-zinc-900 transition-all overflow-hidden"
             >
               {/* Thumbnail */}
-              <div className="relative flex-shrink-0 w-32 aspect-video rounded-lg overflow-hidden bg-zinc-800">
+              <div className="relative flex-shrink-0 w-24 sm:w-28 md:w-32 aspect-video rounded-lg overflow-hidden bg-zinc-800">
                 {item.movie_thumb ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img 
@@ -98,8 +98,8 @@ export default function ClientGuestHistory({ serverHistory = [], userId }: Props
                 )}
                 
                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
-                   <div className="w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center text-black shadow-lg">
-                      <Play className="w-4 h-4 fill-current" />
+                   <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-amber-500 flex items-center justify-center text-black shadow-lg">
+                      <Play className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-current" />
                    </div>
                 </div>
                 
@@ -115,13 +115,13 @@ export default function ClientGuestHistory({ serverHistory = [], userId }: Props
 
               {/* Info */}
               <div className="flex-1 min-w-0 flex flex-col justify-center py-1">
-                <h3 className="text-white font-bold truncate group-hover:text-amber-400 transition-colors">
+                <h3 className="text-white font-bold text-sm sm:text-base truncate group-hover:text-amber-400 transition-colors">
                   {item.movie_name}
                 </h3>
-                <p className="text-zinc-500 text-xs mt-1">
+                <p className="text-zinc-500 text-[11px] sm:text-xs mt-0.5 sm:mt-1">
                   Đang xem: <span className="text-zinc-300">Tập {item.episode_name || item.episode_slug.replace('tap-', '')}</span>
                 </p>
-                <p className="text-[10px] text-amber-500/70 mt-2 font-medium tracking-wider uppercase">
+                <p className="text-[11px] sm:text-xs text-amber-500/70 mt-1.5 sm:mt-2 font-medium">
                   {progress !== null ? `${progress}% hoàn thành` : 'Đang xem'}
                 </p>
               </div>

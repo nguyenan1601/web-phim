@@ -78,7 +78,7 @@ export default function HistoryClient({ initialHistory, userId }: { initialHisto
 
   if (history.length === 0) {
     return (
-      <div className="min-h-[40vh] flex flex-col items-center justify-center bg-zinc-900/50 rounded-3xl border border-white/5 border-dashed p-8">
+      <div className="min-h-[40vh] flex flex-col items-center justify-center bg-zinc-900/50 rounded-3xl border border-white/5 border-dashed p-6 sm:p-8">
         <AlertCircle className="w-12 h-12 text-zinc-700 mb-4" />
         <p className="text-zinc-500 text-lg mb-6 text-center">Lịch sử xem phim của bạn đang trống.</p>
         <Link
@@ -117,10 +117,10 @@ export default function HistoryClient({ initialHistory, userId }: { initialHisto
                 layout
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="group relative bg-zinc-900/40 border border-white/5 hover:border-white/10 p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center gap-5 transition-all hover:bg-zinc-900/60"
+                className="group relative bg-zinc-900/40 border border-white/5 hover:border-white/10 p-3 sm:p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-5 transition-all hover:bg-zinc-900/60"
               >
                 {/* Thumbnail */}
-                <div className="relative flex-shrink-0 w-full sm:w-40 aspect-video rounded-xl overflow-hidden bg-zinc-800 shadow-lg group-hover:shadow-amber-500/10 transition-all">
+                <div className="relative flex-shrink-0 w-24 sm:w-40 aspect-video rounded-xl overflow-hidden bg-zinc-800 shadow-lg group-hover:shadow-amber-500/10 transition-all">
                   {item.movie_thumb ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img 
@@ -134,22 +134,16 @@ export default function HistoryClient({ initialHistory, userId }: { initialHisto
                     </div>
                   )}
                   <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <div className="w-10 h-10 rounded-full bg-amber-500 flex items-center justify-center text-black">
-                      <Play className="w-5 h-5 fill-current" />
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-amber-500 flex items-center justify-center text-black">
+                      <Play className="w-4 h-4 sm:w-5 sm:h-5 fill-current" />
                     </div>
-                  </div>
-                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/10">
-                    <div 
-                      className="h-full bg-amber-500"
-                      style={{ width: `${progress}%` }}
-                    />
                   </div>
                 </div>
 
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <h3 className="text-lg font-semibold text-white truncate">
+                    <h3 className="text-base sm:text-lg font-semibold text-white truncate">
                       {item.movie_name}
                     </h3>
                     <ChevronRight className="w-4 h-4 text-zinc-600" />
@@ -178,21 +172,21 @@ export default function HistoryClient({ initialHistory, userId }: { initialHisto
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-3 self-end sm:self-center">
+                <div className="flex items-center gap-2 sm:gap-3 self-stretch sm:self-center justify-end">
                   <Link
                     href={`/xem/${item.movie_slug}?tap=${item.episode_slug}`}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-amber-500 hover:text-black text-sm font-semibold transition-all group-hover:scale-105"
+                    className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-xl bg-white/5 hover:bg-amber-500 hover:text-black text-xs sm:text-sm font-semibold transition-all group-hover:scale-105"
                   >
-                    <Play className="w-4 h-4 fill-current" />
+                    <Play className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-current" />
                     {isFinished ? "Xem lại" : "Tiếp tục"}
                   </Link>
-                  
+                   
                   <button
                     onClick={() => handleDelete(item.movie_slug, item.movie_name)}
-                    className="p-2.5 rounded-xl bg-white/5 text-zinc-500 hover:bg-rose-500/10 hover:text-rose-500 transition-all"
+                    className="p-2 sm:p-2.5 rounded-xl bg-white/5 text-zinc-500 hover:bg-rose-500/10 hover:text-rose-500 transition-all"
                     title="Xóa khỏi lịch sử"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </button>
                 </div>
               </motion.div>

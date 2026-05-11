@@ -19,14 +19,14 @@ export default async function HistoryPage() {
   const history = await getHistoryAction();
 
   return (
-    <div className="container mx-auto px-4 pt-24 pb-16">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+    <div className="container mx-auto px-4 pt-20 sm:pt-24 pb-12 sm:pb-16">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 sm:mb-8">
         <div>
-          <h1 className="text-3xl font-display font-bold text-white flex items-center gap-3">
-            <History className="w-8 h-8 text-blue-500" />
+          <h1 className="text-2xl sm:text-3xl font-display font-bold text-white flex items-center gap-3">
+            <History className="w-7 h-7 sm:w-8 sm:h-8 text-blue-500" />
             Lịch Sử Xem Phim
           </h1>
-          <p className="text-zinc-500 mt-1">Danh sách phim bạn đã xem gần đây</p>
+          <p className="text-zinc-500 text-sm sm:text-base mt-1">Danh sách phim bạn đã xem gần đây</p>
         </div>
         <Link href="/" className="inline-flex items-center gap-2 text-zinc-400 hover:text-white transition-colors">
           <Home className="w-4 h-4" />
