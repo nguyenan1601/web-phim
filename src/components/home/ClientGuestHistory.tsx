@@ -25,18 +25,18 @@ interface Props {
 }
 
 export default function ClientGuestHistory({ serverHistory = [], userId }: Props) {
-  const [history, setHistory] = useState<HistoryItem[]>(serverHistory.slice(0, 5));
+  const [history, setHistory] = useState<HistoryItem[]>(serverHistory.slice(0, 6));
   const pathname = usePathname();
 
   const refreshHistory = useCallback(async () => {
     if (userId) {
       // Logged-in user: always fetch fresh data from DB via server action
       const freshData = await getHistoryAction();
-      setHistory((freshData || []).slice(0, 5));
+      setHistory((freshData || []).slice(0, 6));
     } else {
       // Guest: read from localStorage
       const local = getLocalHistory();
-      setHistory(local.slice(0, 5) as HistoryItem[]);
+      setHistory(local.slice(0, 6) as HistoryItem[]);
     }
   }, [userId]);
 
