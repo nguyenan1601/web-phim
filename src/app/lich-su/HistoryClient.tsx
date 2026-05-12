@@ -117,10 +117,10 @@ export default function HistoryClient({ initialHistory, userId }: { initialHisto
                 layout
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="group relative bg-zinc-900/40 border border-white/5 hover:border-white/10 p-3 sm:p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-5 transition-all hover:bg-zinc-900/60"
+                className="group relative bg-zinc-900/40 border border-white/5 hover:border-white/10 p-3 sm:p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-5 transition-all hover:bg-zinc-900/60 overflow-hidden"
               >
                 {/* Thumbnail */}
-                <div className="relative flex-shrink-0 w-24 sm:w-40 aspect-video rounded-xl overflow-hidden bg-zinc-800 shadow-lg group-hover:shadow-amber-500/10 transition-all">
+                <div className="relative flex-shrink-0 w-full sm:w-40 aspect-video rounded-xl overflow-hidden bg-zinc-800 shadow-lg group-hover:shadow-amber-500/10 transition-all">
                   {item.movie_thumb ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img 
@@ -141,13 +141,13 @@ export default function HistoryClient({ initialHistory, userId }: { initialHisto
                 </div>
 
                 {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
+                <div className="flex-1 min-w-0 w-full sm:w-auto overflow-hidden">
+                  <div className="flex items-center gap-2 mb-1 min-w-0">
                     <h3 className="text-base sm:text-lg font-semibold text-white truncate">
                       {item.movie_name}
                     </h3>
-                    <ChevronRight className="w-4 h-4 text-zinc-600" />
-                    <span className="text-sm text-amber-500 font-medium">Tập {item.episode_name}</span>
+                    <ChevronRight className="w-4 h-4 text-zinc-600 flex-shrink-0" />
+                    <span className="text-sm text-amber-500 font-medium truncate">Tập {item.episode_name}</span>
                   </div>
                   
                   <div className="flex items-center gap-4 text-xs text-zinc-500 mb-3">
@@ -172,10 +172,10 @@ export default function HistoryClient({ initialHistory, userId }: { initialHisto
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-2 sm:gap-3 self-stretch sm:self-center justify-end">
+                <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-end flex-shrink-0">
                   <Link
                     href={`/xem/${item.movie_slug}?tap=${item.episode_slug}`}
-                    className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-xl bg-white/5 hover:bg-amber-500 hover:text-black text-xs sm:text-sm font-semibold transition-all group-hover:scale-105"
+                    className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-xl bg-white/5 hover:bg-amber-500 hover:text-black text-xs sm:text-sm font-semibold transition-all group-hover:scale-105 whitespace-nowrap"
                   >
                     <Play className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-current" />
                     {isFinished ? "Xem lại" : "Tiếp tục"}
@@ -183,7 +183,7 @@ export default function HistoryClient({ initialHistory, userId }: { initialHisto
                    
                   <button
                     onClick={() => handleDelete(item.movie_slug, item.movie_name)}
-                    className="p-2 sm:p-2.5 rounded-xl bg-white/5 text-zinc-500 hover:bg-rose-500/10 hover:text-rose-500 transition-all"
+                    className="p-2 sm:p-2.5 rounded-xl bg-white/5 text-zinc-500 hover:bg-rose-500/10 hover:text-rose-500 transition-all flex-shrink-0"
                     title="Xóa khỏi lịch sử"
                   >
                     <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />

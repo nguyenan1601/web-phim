@@ -80,7 +80,7 @@ export default function ClientGuestHistory({ serverHistory = [], userId }: Props
             <Link
               key={item.id || item.movie_slug}
               href={`/xem/${item.movie_slug}?tap=${item.episode_slug}`}
-              className="group relative flex gap-3 sm:gap-4 p-2.5 sm:p-3 rounded-2xl bg-zinc-900/50 border border-white/5 hover:border-amber-500/30 hover:bg-zinc-900 transition-all overflow-hidden"
+              className="group relative flex gap-3 sm:gap-4 p-2.5 sm:p-3 rounded-2xl bg-zinc-900/50 border border-white/5 hover:border-amber-500/30 hover:bg-zinc-900 transition-all overflow-hidden min-w-0"
             >
               {/* Thumbnail */}
               <div className="relative flex-shrink-0 w-24 sm:w-28 md:w-32 aspect-video rounded-lg overflow-hidden bg-zinc-800">
@@ -114,11 +114,11 @@ export default function ClientGuestHistory({ serverHistory = [], userId }: Props
               </div>
 
               {/* Info */}
-              <div className="flex-1 min-w-0 flex flex-col justify-center py-1">
+              <div className="flex-1 min-w-0 flex flex-col justify-center py-1 overflow-hidden">
                 <h3 className="text-white font-bold text-sm sm:text-base truncate group-hover:text-amber-400 transition-colors">
                   {item.movie_name}
                 </h3>
-                <p className="text-zinc-500 text-[11px] sm:text-xs mt-0.5 sm:mt-1">
+                <p className="text-zinc-500 text-[11px] sm:text-xs mt-0.5 sm:mt-1 truncate">
                   Đang xem: <span className="text-zinc-300">Tập {item.episode_name || item.episode_slug.replace('tap-', '')}</span>
                 </p>
                 <p className="text-[11px] sm:text-xs text-amber-500/70 mt-1.5 sm:mt-2 font-medium">
