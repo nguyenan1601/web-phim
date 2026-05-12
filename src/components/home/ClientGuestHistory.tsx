@@ -3,9 +3,10 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Play, History as HistoryIcon } from "lucide-react";
-import { getLocalHistory } from "@/lib/localHistory";
-import { getHistoryAction } from "@/app/actions/history";
+import { Play, History as HistoryIcon, Trash2 } from "lucide-react";
+import { getLocalHistory, removeLocalHistory } from "@/lib/localHistory";
+import { getHistoryAction, deleteHistoryAction } from "@/app/actions/history";
+import { toast } from "sonner";
 
 interface HistoryItem {
   id: string;
@@ -56,6 +57,26 @@ export default function ClientGuestHistory({ serverHistory = [], userId }: Props
     };
   }, [pathname, refreshHistory]);
 
+  const handleDelete = async (e: React.MouseEvent, movieSlug: string, movieName: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const prevHistory = [...history];
+    setHistory(history.filter(item => item.movie_slug !== movieSlug));
+
+    if (userId) {
+      const result = await deleteHistoryAction(movieSlug);
+      if (result.error) {
+        setHistory(prevHistory);
+        toast.error(result.error);
+        return;
+      }
+    } else {
+      removeLocalHistory(movieSlug);
+    }
+    toast.info(`Đã xóa "${movieName}" khỏi danh sách`);
+  };
+
   if (history.length === 0) return null;
 
   return (
@@ -77,12 +98,22 @@ export default function ClientGuestHistory({ serverHistory = [], userId }: Props
             : null;
 
           return (
-            <Link
-              key={item.id || item.movie_slug}
-              href={`/xem/${item.movie_slug}?tap=${item.episode_slug}`}
-              className="group relative flex gap-3 sm:gap-4 p-2.5 sm:p-3 rounded-2xl bg-zinc-900/50 border border-white/5 hover:border-amber-500/30 hover:bg-zinc-900 transition-all overflow-hidden min-w-0"
-            >
-              {/* Thumbnail */}
+           <Link
+             key={item.id || item.movie_slug}
+             href={`/xem/${item.movie_slug}?tap=${item.episode_slug}`}
+             className="group relative flex gap-3 sm:gap-4 p-2.5 sm:p-3 rounded-2xl bg-zinc-900/50 border border-white/5 hover:border-amber-500/30 hover:bg-zinc-900 transition-all overflow-hidden min-w-0"
+           >
+             {/* Delete button — always visible on touch, hover on desktop */}
+             <button
+               onClick={(e) => handleDelete(e, item.movie_slug, item.movie_name)}
+               className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 z-10 p-1 sm:p-1.5 rounded-lg bg-black/60 text-zinc-400 hover:bg-rose-500/20 hover:text-rose-400 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all"
+               title="Xóa khỏi danh sách"
+               aria-label={`Xóa ${item.movie_name} khỏi danh sách`}
+             >
+               <Trash2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+             </button>
+
+             {/* Thumbnail */}
               <div className="relative flex-shrink-0 w-24 sm:w-28 md:w-32 aspect-video rounded-lg overflow-hidden bg-zinc-800">
                 {item.movie_thumb ? (
                   // eslint-disable-next-line @next/next/no-img-element
