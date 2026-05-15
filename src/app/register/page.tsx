@@ -1,5 +1,6 @@
 import { signup } from "@/app/auth/actions";
-import { Popcorn, Mail, Lock, User, ArrowLeft } from "lucide-react";
+import BrandLogo from "@/components/layout/BrandLogo";
+import { Mail, Lock, User, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
 interface RegisterPageProps {
@@ -16,15 +17,7 @@ export default async function RegisterPage({
       <div className="w-full max-w-[420px] space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
         {/* Header */}
         <div className="text-center space-y-3">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-white font-bold text-3xl tracking-tight mb-4"
-          >
-            <Popcorn className="w-8 h-8 text-amber-400" />
-            <span className="font-display">
-              XemPhim
-            </span>
-          </Link>
+          <BrandLogo size="auth" className="mb-4" priority />
           <h1 className="text-2xl font-display font-semibold text-white">
             Tạo tài khoản mới
           </h1>

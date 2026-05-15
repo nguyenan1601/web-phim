@@ -3,10 +3,11 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Search, Popcorn, Menu, X, ChevronDown, User as UserIcon, LogOut, Heart, History } from "lucide-react";
+import { Search, Menu, X, ChevronDown, User as UserIcon, LogOut, Heart, History } from "lucide-react";
 import SearchModal from "./SearchModal";
 import { type User } from "@supabase/supabase-js";
 import { signOut } from "@/app/auth/actions";
+import BrandLogo from "./BrandLogo";
 
 const CATEGORIES = [
   { href: "/the-loai/hanh-dong", label: "Hành Động" },
@@ -113,15 +114,7 @@ export default function Navbar({ user }: { user: User | null }) {
       >
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           {/* Logo */}
-          <Link
-            href="/"
-            className="flex items-center gap-2 text-white font-bold text-xl tracking-tight hover:text-amber-400 transition-colors"
-          >
-            <Popcorn className="w-6 h-6 text-amber-400" />
-            <span className="font-display">
-              XemPhim
-            </span>
-          </Link>
+          <BrandLogo priority />
 
           {/* Desktop Nav */}
           <nav className="hidden lg:flex items-center gap-1">

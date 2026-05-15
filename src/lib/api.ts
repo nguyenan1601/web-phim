@@ -787,29 +787,29 @@ export async function getPhimByAdvancedFiltersPage(
     );
 
     // 2. Lọc sơ bộ (Pre-filter) bằng dữ liệu cơ bản để tránh gọi API Detail không cần thiết
-    let candidates: PhimItem[] = [];
+    const candidates: PhimItem[] = [];
     for (const data of pagesData) {
-      if (!data || !data.items) continue;
+      if (!data?.items) continue;
 
-      const filtered = data.items.filter((movie) => {
+      for (const movie of data.items) {
         // Đã tồn tại trong danh sách kết quả thì bỏ qua
-        if (matchedMoviesMap.has(movie.slug)) return false;
+        if (matchedMoviesMap.has(movie.slug)) continue;
 
         if (
           needsCategoryCheck &&
           params.categorySlug &&
           !matchesCategoryFromItem(movie, params.categorySlug)
         ) {
-          return false;
+          continue;
         }
 
         if (needsYearCheck && params.year) {
           const year = extractYearFromMovie(movie);
-          if (year !== 0 && year.toString() !== params.year) return false;
+          if (year !== 0 && year.toString() !== params.year) continue;
         }
-        return true;
-      });
-      candidates.push(...filtered);
+
+        candidates.push(movie);
+      }
     }
 
     if (candidates.length === 0) continue;

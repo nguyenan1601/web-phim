@@ -29,6 +29,11 @@ export const metadata: Metadata = {
     default: "XemPhim - Xem Phim Mới Cập Nhật Nhanh Nhất",
     template: "%s | XemPhim",
   },
+  icons: {
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
+    apple: "/icon.png",
+  },
   description:
     "XemPhim - Kho phim khổng lồ hoàn toàn miễn phí. Phim mới cập nhật mỗi ngày, chất lượng HD, Vietsub. Trải nghiệm xem phim cao cấp không quảng cáo.",
   keywords: [

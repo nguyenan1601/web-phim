@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Popcorn } from "lucide-react";
+import BrandLogo from "./BrandLogo";
 
 const GENRES = [
   { slug: "hanh-dong", name: "Hành Động" },
@@ -28,10 +28,7 @@ export default function Footer() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
-            <Link href="/" className="flex items-center gap-2 text-white font-bold text-lg mb-3">
-              <Popcorn className="w-5 h-5 text-amber-400" />
-              <span className="font-display"><span className="font-bold">XemPhim</span></span>
-            </Link>
+            <BrandLogo size="footer" className="mb-3" />
             <p className="text-xs text-zinc-500 leading-relaxed">
               Kho phim khổng lồ miễn phí. Cập nhật phim mới mỗi ngày với chất lượng cao nhất.
             </p>

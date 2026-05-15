@@ -1,5 +1,6 @@
-import { login, signup } from "@/app/auth/actions";
-import { Popcorn, Mail, Lock, User, ArrowRight } from "lucide-react";
+import { login } from "@/app/auth/actions";
+import BrandLogo from "@/components/layout/BrandLogo";
+import { Mail, Lock } from "lucide-react";
 import Link from "next/link";
 
 interface LoginPageProps {
@@ -14,15 +15,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
       <div className="w-full max-w-[420px] space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
         {/* Header */}
         <div className="text-center space-y-3">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-white font-bold text-3xl tracking-tight mb-4"
-          >
-            <Popcorn className="w-8 h-8 text-amber-400" />
-            <span className="font-display">
-              XemPhim
-            </span>
-          </Link>
+          <BrandLogo size="auth" className="mb-4" priority />
           <h1 className="text-2xl font-display font-semibold text-white">
             Chào mừng trở lại
           </h1>
