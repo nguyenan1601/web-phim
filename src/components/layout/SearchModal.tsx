@@ -23,6 +23,7 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const latestResultsRef = useRef<PhimItem[]>([]);
 
   useEffect(() => {
     if (isOpen) {
@@ -56,10 +57,12 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
     setIsLoading(true);
 
     try {
-      const res = await fetch(`/api/search?keyword=${encodeURIComponent(keyword)}`);
+      const res = await fetch(`/api/search?keyword=${encodeURIComponent(keyword)}&limit=12`);
       if (res.ok) {
         const data = await res.json();
-        setResults(data.items || []);
+        const items = data.items || [];
+        latestResultsRef.current = items;
+        setResults(items);
         setVisibleCount(INITIAL_VISIBLE_RESULTS);
       }
     } catch {
@@ -68,6 +71,10 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
       setIsLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    latestResultsRef.current = results;
+  }, [results]);
 
   const onInputChange = (value: string) => {
     setQuery(value);
@@ -86,8 +93,13 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
 
     if (keyword.length < 2) return;
 
+    const topResultSlug = latestResultsRef.current[0]?.slug;
+    const preferredSlugParam = topResultSlug
+      ? `&preferredSlug=${encodeURIComponent(topResultSlug)}`
+      : "";
+
     onClose();
-    router.push(`/tim-kiem?keyword=${encodeURIComponent(keyword)}`);
+    router.push(`/tim-kiem?keyword=${encodeURIComponent(keyword)}${preferredSlugParam}`);
   };
 
   const handleResultScroll = (event: React.UIEvent<HTMLDivElement>) => {

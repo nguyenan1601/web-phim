@@ -5,7 +5,7 @@ import Pagination from "@/components/ui/movie/Pagination";
 import { searchPhimAdvanced } from "@/lib/search";
 
 interface PageProps {
-  searchParams: Promise<{ keyword?: string; page?: string }>;
+  searchParams: Promise<{ keyword?: string; page?: string; preferredSlug?: string }>;
 }
 
 export async function generateMetadata({ searchParams }: PageProps) {
@@ -31,11 +31,12 @@ export default async function SearchPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const keyword = params.keyword;
   const pageParam = params.page;
+  const preferredSlug = params.preferredSlug;
 
   const query = keyword?.trim() || "";
   const currentPage = Math.max(1, parseInt(pageParam || "1", 10) || 1);
 
-  const allItems = query.length >= 2 ? await searchPhimAdvanced(query) : [];
+  const allItems = query.length >= 2 ? await searchPhimAdvanced(query, preferredSlug) : [];
   const totalItems = allItems.length;
   const totalPages = Math.ceil(totalItems / PAGE_SIZE);
 

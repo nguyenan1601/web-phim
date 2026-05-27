@@ -1,4 +1,10 @@
 const API_BASE = "https://phim.nguonc.com/api";
+const API_HEADERS = {
+  accept: "application/json, text/plain, */*",
+  referer: "https://phim.nguonc.com/",
+  "user-agent":
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36",
+};
 
 export interface PhimItem {
   name: string;
@@ -126,6 +132,7 @@ export interface FilmDetailResponse {
 export async function getPhimMoi(page: number = 1): Promise<PhimResponse | null> {
   try {
     const res = await fetch(`${API_BASE}/films/phim-moi-cap-nhat?page=${page}`, {
+      headers: API_HEADERS,
       next: { revalidate: 3600 },
     });
     if (!res.ok) throw new Error("Fetch failed");
@@ -146,6 +153,7 @@ export async function getPhimTheoDanhSach(
 ): Promise<PhimResponse | null> {
   try {
     const res = await fetch(`${API_BASE}/films/danh-sach/${slug}?page=${page}`, {
+      headers: API_HEADERS,
       next: { revalidate: 3600 },
     });
     if (!res.ok) throw new Error("Fetch failed");
@@ -167,6 +175,7 @@ export async function getPhimTheoTheLoai(
   if (!slug) return null;
   try {
     const res = await fetch(`${API_BASE}/films/the-loai/${slug}?page=${page}`, {
+      headers: API_HEADERS,
       next: { revalidate: 86400 },
     });
     if (!res.ok) {
@@ -190,6 +199,7 @@ export async function getPhimTheoQuocGia(
 ): Promise<PhimResponse | null> {
   try {
     const res = await fetch(`${API_BASE}/films/quoc-gia/${slug}?page=${page}`, {
+      headers: API_HEADERS,
       next: { revalidate: 86400 },
     });
     if (!res.ok) throw new Error("Fetch failed");
@@ -210,6 +220,7 @@ export async function getPhimTheoNam(
 ): Promise<PhimResponse | null> {
   try {
     const res = await fetch(`${API_BASE}/films/nam-phat-hanh/${year}?page=${page}`, {
+      headers: API_HEADERS,
       next: { revalidate: 86400 },
     });
     if (!res.ok) throw new Error("Fetch failed");
@@ -234,6 +245,7 @@ export async function getPhimDetail(
 ): Promise<FilmDetailResponse | null> {
   try {
     const res = await fetch(`${API_BASE}/film/${slug}`, {
+      headers: API_HEADERS,
       next: { revalidate: 3600 },
     });
     if (!res.ok) {
@@ -255,6 +267,7 @@ export async function searchPhim(keyword: string): Promise<PhimResponse | null> 
   if (!keyword) return null;
   try {
     const res = await fetch(`${API_BASE}/films/search?keyword=${encodeURIComponent(keyword)}`, {
+      headers: API_HEADERS,
       cache: "no-store",
     });
     if (!res.ok) throw new Error("Fetch failed");
@@ -356,6 +369,7 @@ function matchesCategoryFromItem(item: PhimItem, categorySlug: string) {
 async function fetchFilmPage(path: string, page: number): Promise<PhimResponse | null> {
   try {
     const res = await fetch(`${API_BASE}${path}?page=${page}`, {
+      headers: API_HEADERS,
       next: { revalidate: 1800 },
     });
 

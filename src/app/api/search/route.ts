@@ -3,13 +3,16 @@ import { searchPhimAdvanced } from "@/lib/search";
 
 export async function GET(request: NextRequest) {
   const keyword = request.nextUrl.searchParams.get("keyword");
+  const preferredSlug = request.nextUrl.searchParams.get("preferredSlug") || undefined;
+  const limitParam = request.nextUrl.searchParams.get("limit");
+  const limit = limitParam ? Math.max(1, parseInt(limitParam, 10) || 0) : undefined;
 
   if (!keyword || keyword.length < 2) {
     return NextResponse.json({ items: [] });
   }
 
   try {
-    const items = await searchPhimAdvanced(keyword);
+    const items = await searchPhimAdvanced(keyword, { preferredSlug, limit });
     return NextResponse.json({ items });
   } catch {
     return NextResponse.json({ items: [] }, { status: 500 });

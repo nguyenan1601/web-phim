@@ -1,21 +1,39 @@
 import { PhimItem, PhimResponse, comparePhimItems } from "@/lib/api";
 
 const API_BASE = "https://phim.nguonc.com/api";
+const API_HEADERS = {
+  accept: "application/json, text/plain, */*",
+  referer: "https://phim.nguonc.com/",
+  "user-agent":
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36",
+};
 const LOCAL_POOL_TTL_MS = 1000 * 60 * 30;
 const SEARCH_CACHE_TTL_MS = 1000 * 60 * 5;
 const FETCH_TIMEOUT_MS = 3000;
 const MAX_SEARCH_PAGES = 3;
+const LOCAL_POOL_CONCURRENCY = 8;
 const LOCAL_SEARCH_SOURCES = [
   { path: "/films/quoc-gia/viet-nam", pages: 30 },
   { path: "/films/phim-moi-cap-nhat", pages: 20 },
 ];
 
 type SearchableMovie = PhimItem;
+type PreparedMovie = {
+  item: SearchableMovie;
+  normalizedName: string;
+  normalizedOriginalName: string;
+  normalizedSlug: string;
+  nameTokens: string[];
+  originalNameTokens: string[];
+  slugTokens: string[];
+};
 
 let localPoolCache: {
   expiresAt: number;
-  items: SearchableMovie[];
+  items: PreparedMovie[];
 } | null = null;
+
+const preparedMovieCache = new WeakMap<SearchableMovie, PreparedMovie>();
 
 const searchResultCache = new Map<
   string,
@@ -31,20 +49,24 @@ function normalizeSearchValue(value: string | null | undefined) {
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/đ/g, "d")
     .replace(/Đ/g, "D")
+    .replace(/['’`]/g, "")
     .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
     .trim();
 }
 
 function slugifyKeyword(value: string | null | undefined) {
   return normalizeSearchValue(value)
-    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/\s+/g, "-")
     .replace(/^-+|-+$/g, "");
 }
 
 function splitTokens(value: string | null | undefined) {
-  return normalizeSearchValue(value)
-    .split(/[^a-z0-9]+/)
-    .filter(Boolean);
+  return normalizeSearchValue(value).split(/\s+/).filter(Boolean);
+}
+
+function toTitleCase(value: string) {
+  return value.replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 function levenshteinDistance(source: string, target: string) {
@@ -84,15 +106,16 @@ function getFuzzyAllowance(token: string) {
   return 3;
 }
 
-function hasFuzzyTokenMatch(queryTokens: string[], fieldValue: string) {
-  if (queryTokens.length === 0 || !fieldValue) return false;
-  const fieldTokens = splitTokens(fieldValue);
-
-  if (fieldTokens.length === 0) return false;
+function hasFuzzyTokenMatch(queryTokens: string[], fieldTokens: string[]) {
+  if (queryTokens.length === 0 || fieldTokens.length === 0) return false;
 
   return queryTokens.every((queryToken) =>
     fieldTokens.some((fieldToken) => {
-      if (fieldToken.includes(queryToken) || queryToken.includes(fieldToken)) {
+      if (fieldToken.includes(queryToken)) {
+        return true;
+      }
+
+      if (fieldToken.length >= 3 && queryToken.includes(fieldToken)) {
         return true;
       }
 
@@ -104,16 +127,30 @@ function hasFuzzyTokenMatch(queryTokens: string[], fieldValue: string) {
   );
 }
 
-function scoreMovie(item: SearchableMovie, keyword: string) {
-  const normalizedKeyword = normalizeSearchValue(keyword);
-  const queryTokens = splitTokens(keyword);
+function prepareMovie(item: SearchableMovie): PreparedMovie {
+  const cached = preparedMovieCache.get(item);
+  if (cached) return cached;
 
-  const normalizedName = normalizeSearchValue(item.name);
-  const normalizedOriginalName = normalizeSearchValue(item.original_name);
-  const normalizedSlug = normalizeSearchValue(item.slug);
-  const normalizedDirector = normalizeSearchValue(item.director);
-  const normalizedCasts = normalizeSearchValue(item.casts);
-  const normalizedDescription = normalizeSearchValue(item.description);
+  const prepared = {
+    item,
+    normalizedName: normalizeSearchValue(item.name),
+    normalizedOriginalName: normalizeSearchValue(item.original_name),
+    normalizedSlug: normalizeSearchValue(item.slug),
+    nameTokens: splitTokens(item.name),
+    originalNameTokens: splitTokens(item.original_name),
+    slugTokens: splitTokens(item.slug),
+  };
+
+  preparedMovieCache.set(item, prepared);
+  return prepared;
+}
+
+function scorePreparedMovie(
+  prepared: PreparedMovie,
+  normalizedKeyword: string,
+  queryTokens: string[],
+) {
+  const { normalizedName, normalizedOriginalName, normalizedSlug } = prepared;
 
   let score = 0;
 
@@ -144,32 +181,16 @@ function scoreMovie(item: SearchableMovie, keyword: string) {
     score += 420;
   }
 
-  if (normalizedDirector.includes(normalizedKeyword)) {
-    score += 320;
-  }
-
-  if (normalizedCasts.includes(normalizedKeyword)) {
-    score += 300;
-  }
-
-  if (normalizedDescription.includes(normalizedKeyword)) {
-    score += 120;
-  }
-
-  if (hasFuzzyTokenMatch(queryTokens, item.name)) {
+  if (score < 600 && hasFuzzyTokenMatch(queryTokens, prepared.nameTokens)) {
     score += 260;
   }
 
-  if (hasFuzzyTokenMatch(queryTokens, item.original_name)) {
+  if (score < 600 && hasFuzzyTokenMatch(queryTokens, prepared.originalNameTokens)) {
     score += 220;
   }
 
-  if (hasFuzzyTokenMatch(queryTokens, item.director)) {
-    score += 170;
-  }
-
-  if (hasFuzzyTokenMatch(queryTokens, item.casts || "")) {
-    score += 170;
+  if (score < 600 && hasFuzzyTokenMatch(queryTokens, prepared.slugTokens)) {
+    score += 200;
   }
 
   return score;
@@ -185,6 +206,10 @@ async function fetchJson<T>(
   try {
     const res = await fetch(url, {
       ...init,
+      headers: {
+        ...API_HEADERS,
+        ...init?.headers,
+      },
       signal: controller.signal,
     });
     if (!res.ok) return null;
@@ -265,6 +290,28 @@ async function fetchListPage(path: string, page: number) {
   return Array.isArray(data?.items) ? data.items : [];
 }
 
+async function runWithConcurrency<T>(
+  tasks: Array<() => Promise<T>>,
+  concurrency: number,
+) {
+  const results: T[] = [];
+  let nextIndex = 0;
+
+  async function worker() {
+    while (nextIndex < tasks.length) {
+      const currentIndex = nextIndex;
+      nextIndex += 1;
+      results[currentIndex] = await tasks[currentIndex]();
+    }
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, tasks.length) }, () => worker()),
+  );
+
+  return results;
+}
+
 async function getLocalSearchPool() {
   const now = Date.now();
 
@@ -273,20 +320,26 @@ async function getLocalSearchPool() {
   }
 
   const movieMap = new Map<string, SearchableMovie>();
+  const pageTasks = LOCAL_SEARCH_SOURCES.flatMap((source) =>
+    Array.from(
+      { length: source.pages },
+      (_, index) => () => fetchListPage(source.path, index + 1),
+    ),
+  );
+  const pageResults = await runWithConcurrency(
+    pageTasks,
+    LOCAL_POOL_CONCURRENCY,
+  );
 
-  for (const source of LOCAL_SEARCH_SOURCES) {
-    for (let page = 1; page <= source.pages; page += 1) {
-      const items = await fetchListPage(source.path, page);
-
-      for (const item of items) {
-        if (!movieMap.has(item.slug)) {
-          movieMap.set(item.slug, item);
-        }
+  for (const items of pageResults) {
+    for (const item of items) {
+      if (item?.slug && !movieMap.has(item.slug)) {
+        movieMap.set(item.slug, item);
       }
     }
   }
 
-  const items = Array.from(movieMap.values());
+  const items = Array.from(movieMap.values()).map(prepareMovie);
   localPoolCache = {
     items,
     expiresAt: now + LOCAL_POOL_TTL_MS,
@@ -295,28 +348,52 @@ async function getLocalSearchPool() {
   return items;
 }
 
-export async function searchPhimAdvanced(keyword: string) {
+type SearchOptions = {
+  limit?: number;
+  preferredSlug?: string;
+};
+
+export async function searchPhimAdvanced(
+  keyword: string,
+  preferredSlugOrOptions?: string | SearchOptions,
+) {
   const trimmedKeyword = keyword.trim();
+  const options =
+    typeof preferredSlugOrOptions === "string"
+      ? { preferredSlug: preferredSlugOrOptions }
+      : preferredSlugOrOptions || {};
+  const { limit, preferredSlug } = options;
 
   if (trimmedKeyword.length < 2) {
     return [];
   }
 
-  const cacheKey = normalizeSearchValue(trimmedKeyword);
+  const cacheKey = `${normalizeSearchValue(trimmedKeyword)}:${limit || "all"}`;
   const cachedResult = searchResultCache.get(cacheKey);
 
   if (cachedResult && cachedResult.expiresAt > Date.now()) {
     return cachedResult.items;
   }
 
-  const normalizedKeyword = cacheKey;
+  const normalizedKeyword = normalizeSearchValue(trimmedKeyword);
+  const queryTokens = splitTokens(trimmedKeyword);
   const keywordSlug = slugifyKeyword(trimmedKeyword);
+  const titleCaseKeyword = toTitleCase(normalizedKeyword);
   const queryVariants = Array.from(
-    new Set([trimmedKeyword, normalizedKeyword, keywordSlug].filter(Boolean)),
+    new Set(
+      [trimmedKeyword, normalizedKeyword, titleCaseKeyword, keywordSlug].filter(
+        Boolean,
+      ),
+    ),
   );
-  const [searchResultsList, slugMovie, localPool] = await Promise.all([
+  const preferredMoviePromise =
+    preferredSlug && preferredSlug !== keywordSlug
+      ? fetchMovieBySlug(preferredSlug)
+      : Promise.resolve(null);
+  const [searchResultsList, slugMovie, preferredMovie, localPool] = await Promise.all([
     Promise.all(queryVariants.map(fetchSearchResults)),
     fetchMovieBySlug(keywordSlug),
+    preferredMoviePromise,
     getLocalSearchPool(),
   ]);
 
@@ -334,18 +411,32 @@ export async function searchPhimAdvanced(keyword: string) {
     movieMap.set(slugMovie.slug, slugMovie);
   }
 
-  for (const item of localPool) {
-    const localScore = scoreMovie(item, trimmedKeyword);
-    if (localScore > 0 && !movieMap.has(item.slug)) {
-      movieMap.set(item.slug, item);
+  if (preferredMovie?.slug) {
+    movieMap.set(preferredMovie.slug, preferredMovie);
+  }
+
+  for (const prepared of localPool) {
+    const localScore = scorePreparedMovie(
+      prepared,
+      normalizedKeyword,
+      queryTokens,
+    );
+    if (localScore > 0 && !movieMap.has(prepared.item.slug)) {
+      movieMap.set(prepared.item.slug, prepared.item);
     }
   }
 
   const items = Array.from(movieMap.values())
-    .map((item) => ({
-      item,
-      score: scoreMovie(item, trimmedKeyword),
-    }))
+    .map((item) => {
+      const prepared = prepareMovie(item);
+      return {
+        item,
+        score:
+          item.slug === preferredMovie?.slug
+            ? scorePreparedMovie(prepared, normalizedKeyword, queryTokens) + 2000
+            : scorePreparedMovie(prepared, normalizedKeyword, queryTokens),
+      };
+    })
     .filter((entry) => entry.score > 0)
     .sort((left, right) => {
       if (right.score !== left.score) {
@@ -354,7 +445,8 @@ export async function searchPhimAdvanced(keyword: string) {
 
       return comparePhimItems(left.item, right.item);
     })
-    .map((entry) => entry.item);
+    .map((entry) => entry.item)
+    .slice(0, limit);
 
   searchResultCache.set(cacheKey, {
     items,
