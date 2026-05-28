@@ -16,7 +16,7 @@ export default async function Home() {
 
   // Lấy 1 phim làm bộ phim nổi bật (Hero section)
   const heroMovie = phimMoi.length > 0 ? phimMoi[0] : null;
-  // Lấy 15 phim (3 hàng × 5 cột) để grid luôn đầy
+  // Lấy 15 phim cho desktop, ẩn phim cuối trên mobile để grid 2 cột luôn cân bằng
   const gridMovies = phimMoi.slice(1, 16);
 
   return (
@@ -100,8 +100,10 @@ export default async function Home() {
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-5 gap-4 md:gap-5">
-          {gridMovies.map((movie) => (
-            <MovieCard key={movie.slug} movie={movie} />
+          {gridMovies.map((movie, index) => (
+            <div key={movie.slug} className={index === 14 ? "hidden sm:block" : undefined}>
+              <MovieCard movie={movie} />
+            </div>
           ))}
         </div>
       </div>
