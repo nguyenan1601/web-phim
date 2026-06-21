@@ -1,6 +1,11 @@
 import { createClient } from '@/utils/supabase/server'
 import { cookies } from 'next/headers'
 
+type Todo = {
+  id: string | number
+  name?: string | null
+}
+
 export default async function TestSupabasePage() {
   const cookieStore = await cookies()
   const supabase = createClient(cookieStore)
@@ -16,7 +21,9 @@ export default async function TestSupabasePage() {
       {error && (
         <div className="p-4 bg-red-500/10 border border-red-500/20 text-red-500 rounded-xl mb-4">
           Lỗi: {error.message}
-          <p className="text-sm mt-1 text-zinc-500">(Gợi ý: Bạn có thể chưa tạo bảng 'todos' hoặc cấu hình RLS chưa đúng)</p>
+          <p className="text-sm mt-1 text-zinc-500">
+            (Gợi ý: Bạn có thể chưa tạo bảng <code>todos</code> hoặc cấu hình RLS chưa đúng)
+          </p>
         </div>
       )}
 
@@ -27,13 +34,15 @@ export default async function TestSupabasePage() {
       )}
 
       <ul className="space-y-2">
-        {todos?.map((todo: any) => (
+        {(todos as Todo[] | null)?.map((todo) => (
           <li key={todo.id} className="p-3 bg-zinc-900 border border-white/5 rounded-lg">
             {todo.name}
           </li>
         ))}
         {todos?.length === 0 && (
-          <li className="text-zinc-500 italic">Bảng 'todos' hiện đang trống.</li>
+          <li className="text-zinc-500 italic">
+            Bảng <code>todos</code> hiện đang trống.
+          </li>
         )}
       </ul>
 

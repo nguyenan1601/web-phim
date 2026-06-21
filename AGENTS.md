@@ -47,3 +47,14 @@ This project is indexed by GitNexus as **web-phim** (724 symbols, 1160 relations
 | Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
 
 <!-- gitnexus:end -->
+
+## Agent Skills (addyosmani/agent-skills)
+
+This frontend project includes the full agent-skills pack. See root `AGENTS.md` for the complete skill map. Key frontend skills:
+
+- **frontend-ui-engineering**: `..\.agents\skills\agent-skills\frontend-ui-engineering\SKILL.md`
+- **browser-testing-with-devtools**: `..\.agents\skills\agent-skills\browser-testing-with-devtools\SKILL.md`
+- **performance-optimization**: `..\.agents\skills\agent-skills\performance-optimization\SKILL.md`
+- **security-and-hardening**: `..\.agents\skills\agent-skills\security-and-hardening\SKILL.md`
+- **test-driven-development**: `..\.agents\skills\agent-skills\test-driven-development\SKILL.md`
+- **code-review-and-quality**: `..\.agents\skills\agent-skills\code-review-and-quality\SKILL.md`

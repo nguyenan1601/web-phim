@@ -15,7 +15,6 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
       const forwardedHost = request.headers.get('x-forwarded-host') // mirror the protocol and host
-      const isLocalEnv = process.env.NODE_TIME_DEBUG // Example check for local env
       if (forwardedHost) {
         return NextResponse.redirect(`${origin}${next}`)
       } else {

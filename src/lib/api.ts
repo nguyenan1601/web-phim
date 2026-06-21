@@ -1,9 +1,7 @@
-const API_BASE = "https://phim.nguonc.com/api";
+const API_BASE = "https://phimapi.com";
+const DEFAULT_IMAGE_BASE = "https://phimimg.com";
 const API_HEADERS = {
-  accept: "application/json, text/plain, */*",
-  referer: "https://phim.nguonc.com/",
-  "user-agent":
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36",
+  accept: "application/json",
 };
 
 export interface PhimItem {
@@ -22,20 +20,15 @@ export interface PhimItem {
   language: string;
   director: string;
   casts: string | null;
-  // Bổ sung dữ liệu category để trích xuất năm, thể loại chính xác hơn
   category?: Record<string, { 
     group: { id: string; name: string }; 
     list: { id: string; name: string }[] 
   }>;
 }
 
-/**
- * Trích xuất năm phát hành từ tên phim hoặc URL hình ảnh
- */
 export function extractYearFromMovie(item: PhimItem): number {
   if (!item) return 0;
 
-  // 1. Ưu tiên: Trích xuất từ dữ liệu 'category' chính thức (Nhóm 'Năm')
   if (item.category) {
     for (const key in item.category) {
       const group = item.category[key];
@@ -48,42 +41,33 @@ export function extractYearFromMovie(item: PhimItem): number {
       }
     }
   }
-  
-  // 2. Fallback: Tìm năm trong ngoặc đơn (2024)
+
   const parenMatch = item.name.match(/\((\d{4})\)/) || item.original_name.match(/\((\d{4})\)/);
   if (parenMatch) return parseInt(parenMatch[1], 10);
 
-  // 3. Fallback: Tìm năm trong URL hình ảnh (ví dụ: ...-2024-thumb.jpg)
   const urlMatch = item.thumb_url?.match(/[-_](\d{4})[-_]/) || item.poster_url?.match(/[-_](\d{4})[-_]/);
   if (urlMatch) return parseInt(urlMatch[1], 10);
 
-  // 4. Fallback: Tìm năm 4 chữ số (19xx hoặc 20xx) trong tên
   const textMatch = item.name.match(/\b(19|20)\d{2}\b/) || item.original_name.match(/\b(19|20)\d{2}\b/);
   if (textMatch) return parseInt(textMatch[0], 10);
 
   return 0;
 }
 
-/**
- * Hàm so sánh phim: Mới cập nhật (modified) > Mới tạo (created) > Năm phát hành
- */
 export function comparePhimItems(a: PhimItem, b: PhimItem): number {
   const modA = new Date(a.modified || 0).getTime();
   const modB = new Date(b.modified || 0).getTime();
 
-  // 1. So sánh ngày cập nhật (modified) - Giảm dần
   if (modB !== modA) {
     return modB - modA;
   }
 
-  // 2. Tiêu chuẩn thứ hai: Năm phát hành trích xuất được (Year) - Giảm dần
   const yearA = extractYearFromMovie(a);
   const yearB = extractYearFromMovie(b);
   if (yearB !== yearA) {
     return yearB - yearA;
   }
 
-  // 3. Tiêu chí cuối cùng: Ngày tạo (created) - Giảm dần
   const creA = new Date(a.created || 0).getTime();
   const creB = new Date(b.created || 0).getTime();
   return creB - creA;
@@ -129,14 +113,240 @@ export interface FilmDetailResponse {
   movie: MovieDetail;
 }
 
+// ============ New API raw interfaces ============
+
+interface PhimApiNamedItem {
+  id?: string;
+  name?: string;
+  slug?: string;
+}
+
+interface PhimApiTimeObject {
+  time?: string;
+}
+
+interface PhimApiMovieItem {
+  _id?: string;
+  name?: string;
+  slug?: string;
+  origin_name?: string;
+  thumb_url?: string;
+  poster_url?: string;
+  created?: PhimApiTimeObject | string;
+  modified?: PhimApiTimeObject | string;
+  content?: string;
+  type?: string;
+  status?: string;
+  episode_current?: string;
+  episode_total?: string;
+  time?: string;
+  quality?: string;
+  lang?: string;
+  year?: number | string;
+  actor?: string[];
+  director?: string[];
+  category?: PhimApiNamedItem[];
+  country?: PhimApiNamedItem[];
+  episodes?: PhimApiEpisodeServer[];
+  trailer_url?: string;
+  is_copyright?: boolean;
+  sub_docquyen?: boolean;
+  chieurap?: boolean;
+}
+
+interface PhimApiEpisodeItem {
+  name?: string;
+  slug?: string;
+  filename?: string;
+  link_embed?: string;
+  link_m3u8?: string;
+}
+
+interface PhimApiEpisodeServer {
+  server_name?: string;
+  server_data?: PhimApiEpisodeItem[];
+}
+
+// V1 flat list response
+interface PhimApiListResponseV1 {
+  status?: boolean | string;
+  msg?: string;
+  items?: PhimApiMovieItem[];
+  pagination?: {
+    totalItems?: number;
+    totalItemsPerPage?: number;
+    currentPage?: number;
+    totalPages?: number;
+  };
+}
+
+// V2/V3 rich response
+interface PhimApiListResponseV2 {
+  status?: boolean | string;
+  msg?: string;
+  data?: {
+    items?: PhimApiMovieItem[];
+    params?: {
+      type_slug?: string;
+      filterCategory?: string[];
+      filterCountry?: string[];
+      filterYear?: string[];
+      filterType?: string[];
+      sortField?: string;
+      sortType?: string;
+      pagination?: {
+        totalItems?: number;
+        totalItemsPerPage?: number;
+        currentPage?: number;
+        totalPages?: number;
+      };
+    };
+    APP_DOMAIN_CDN_IMAGE?: string;
+  };
+}
+
+interface PhimApiDetailResponse {
+  status?: boolean | string;
+  msg?: string;
+  movie?: PhimApiMovieItem;
+  episodes?: PhimApiEpisodeServer[];
+}
+
+// ============ Normalization functions ============
+
+function getTimeValue(value: PhimApiMovieItem["created"] | PhimApiMovieItem["modified"]) {
+  if (!value) return "";
+  return typeof value === "string" ? value : value.time || "";
+}
+
+function normalizeImageUrl(value: string | undefined, imageBase = DEFAULT_IMAGE_BASE) {
+  if (!value) return "";
+  if (/^https?:\/\//i.test(value)) return value;
+
+  const cleanValue = value.replace(/^\/+/, "");
+  const cleanBase = imageBase.replace(/\/+$/, "");
+
+  if (cleanValue.startsWith("uploads/")) {
+    return `${cleanBase}/${cleanValue}`;
+  }
+
+  return `${cleanBase}/uploads/movies/${cleanValue}`;
+}
+
+function normalizeNamedItems(items: PhimApiNamedItem[] | undefined) {
+  return (items || []).map((item) => ({
+    id: item.slug || item.id || "",
+    name: item.name || "",
+  }));
+}
+
+function buildCategoryRecord(item: PhimApiMovieItem): MovieDetail["category"] {
+  const record: MovieDetail["category"] = {};
+  const genres = normalizeNamedItems(item.category);
+  const countries = normalizeNamedItems(item.country);
+  const year = item.year ? String(item.year) : "";
+
+  if (genres.length > 0) {
+    record["the-loai"] = {
+      group: { id: "the-loai", name: "Thể loại" },
+      list: genres,
+    };
+  }
+
+  if (countries.length > 0) {
+    record["quoc-gia"] = {
+      group: { id: "quoc-gia", name: "Quốc gia" },
+      list: countries,
+    };
+  }
+
+  if (year) {
+    record.nam = {
+      group: { id: "nam", name: "Năm" },
+      list: [{ id: year, name: year }],
+    };
+  }
+
+  return record;
+}
+
+function parseEpisodeTotal(item: PhimApiMovieItem) {
+  if (item.type === "single" || item.type === "movie") return 1;
+
+  const source = item.episode_total || item.episode_current || "";
+  if (/full/i.test(source)) return 1;
+
+  const match = source.match(/\d+/);
+  return match ? Number(match[0]) : 2;
+}
+
+function normalizeMovieItem(
+  item: PhimApiMovieItem,
+  imageBase?: string
+): PhimItem {
+  return {
+    name: item.name || "",
+    slug: item.slug || "",
+    original_name: (item.origin_name || "").replace(/&#039;/g, "'"),
+    thumb_url: normalizeImageUrl(item.thumb_url, imageBase),
+    poster_url: normalizeImageUrl(item.poster_url || item.thumb_url, imageBase),
+    created: getTimeValue(item.created),
+    modified: getTimeValue(item.modified),
+    description: item.content || "",
+    total_episodes: parseEpisodeTotal(item),
+    current_episode: item.episode_current || "",
+    time: item.time || "",
+    quality: item.quality || "",
+    language: item.lang || "",
+    director: (item.director || []).filter(Boolean).join(", "),
+    casts: (item.actor || []).filter(Boolean).join(", ") || null,
+    category: buildCategoryRecord(item),
+  };
+}
+
+function normalizeEpisodeServers(episodes: PhimApiEpisodeServer[] | undefined) {
+  return (episodes || [])
+    .map((server) => ({
+      server_name: server.server_name || "Server",
+      items: (server.server_data || [])
+        .map((episode, index) => ({
+          name: episode.name || String(index + 1),
+          slug: episode.slug || `tap-${index + 1}`,
+          embed: episode.link_embed || "",
+          m3u8: episode.link_m3u8 || "",
+        }))
+        .filter((episode) => episode.embed || episode.m3u8),
+    }))
+    .filter((server) => server.items.length > 0);
+}
+
+// ============ API fetch functions ============
+
 export async function getPhimMoi(page: number = 1): Promise<PhimResponse | null> {
   try {
-    const res = await fetch(`${API_BASE}/films/phim-moi-cap-nhat?page=${page}`, {
+    const res = await fetch(`${API_BASE}/danh-sach/phim-moi-cap-nhat?page=${page}`, {
       headers: API_HEADERS,
       next: { revalidate: 3600 },
     });
     if (!res.ok) throw new Error("Fetch failed");
-    const data = await res.json();
+    const json = await res.json() as PhimApiListResponseV1;
+
+    const items = (json.items || []);
+    const pagination = json.pagination || {};
+    const itemsPerPage = pagination.totalItemsPerPage || items.length || 24;
+    const totalItems = pagination.totalItems || items.length;
+
+    const data: PhimResponse = {
+      status: String(json.status || "success"),
+      paginate: {
+        current_page: pagination.currentPage || 1,
+        total_page: Math.max(1, Math.ceil(totalItems / itemsPerPage)),
+        total_items: totalItems,
+        items_per_page: itemsPerPage,
+      },
+      items: items.map((item) => normalizeMovieItem(item)),
+    };
+
     if (data && data.items) {
       data.items.sort(comparePhimItems);
     }
@@ -152,12 +362,31 @@ export async function getPhimTheoDanhSach(
   page: number = 1
 ): Promise<PhimResponse | null> {
   try {
-    const res = await fetch(`${API_BASE}/films/danh-sach/${slug}?page=${page}`, {
+    const res = await fetch(`${API_BASE}/v1/api/danh-sach/${slug}?page=${page}`, {
       headers: API_HEADERS,
       next: { revalidate: 3600 },
     });
     if (!res.ok) throw new Error("Fetch failed");
-    const data = await res.json();
+    const json = await res.json() as PhimApiListResponseV2;
+
+    const dataObj = json.data || {};
+    const items = (dataObj.items || []);
+    const pagination = dataObj.params?.pagination || {};
+    const itemsPerPage = pagination.totalItemsPerPage || items.length || 24;
+    const totalItems = pagination.totalItems || items.length;
+    const imageBase = dataObj.APP_DOMAIN_CDN_IMAGE;
+
+    const data: PhimResponse = {
+      status: String(json.status || "success"),
+      paginate: {
+        current_page: pagination.currentPage || 1,
+        total_page: Math.max(1, Math.ceil(totalItems / itemsPerPage)),
+        total_items: totalItems,
+        items_per_page: itemsPerPage,
+      },
+      items: items.map((item) => normalizeMovieItem(item, imageBase)),
+    };
+
     if (data && data.items) {
       data.items.sort(comparePhimItems);
     }
@@ -174,7 +403,7 @@ export async function getPhimTheoTheLoai(
 ): Promise<PhimResponse | null> {
   if (!slug) return null;
   try {
-    const res = await fetch(`${API_BASE}/films/the-loai/${slug}?page=${page}`, {
+    const res = await fetch(`${API_BASE}/v1/api/the-loai/${slug}?page=${page}`, {
       headers: API_HEADERS,
       next: { revalidate: 86400 },
     });
@@ -182,7 +411,26 @@ export async function getPhimTheoTheLoai(
       console.warn(`Fetch failed for genre ${slug}: ${res.status}`);
       return null;
     }
-    const data = await res.json();
+    const json = await res.json() as PhimApiListResponseV2;
+
+    const dataObj = json.data || {};
+    const items = (dataObj.items || []);
+    const pagination = dataObj.params?.pagination || {};
+    const itemsPerPage = pagination.totalItemsPerPage || items.length || 24;
+    const totalItems = pagination.totalItems || items.length;
+    const imageBase = dataObj.APP_DOMAIN_CDN_IMAGE;
+
+    const data: PhimResponse = {
+      status: String(json.status || "success"),
+      paginate: {
+        current_page: pagination.currentPage || 1,
+        total_page: Math.max(1, Math.ceil(totalItems / itemsPerPage)),
+        total_items: totalItems,
+        items_per_page: itemsPerPage,
+      },
+      items: items.map((item) => normalizeMovieItem(item, imageBase)),
+    };
+
     if (data && data.items) {
       data.items.sort(comparePhimItems);
     }
@@ -198,12 +446,31 @@ export async function getPhimTheoQuocGia(
   page: number = 1
 ): Promise<PhimResponse | null> {
   try {
-    const res = await fetch(`${API_BASE}/films/quoc-gia/${slug}?page=${page}`, {
+    const res = await fetch(`${API_BASE}/v1/api/quoc-gia/${slug}?page=${page}`, {
       headers: API_HEADERS,
       next: { revalidate: 86400 },
     });
     if (!res.ok) throw new Error("Fetch failed");
-    const data = await res.json();
+    const json = await res.json() as PhimApiListResponseV2;
+
+    const dataObj = json.data || {};
+    const items = (dataObj.items || []);
+    const pagination = dataObj.params?.pagination || {};
+    const itemsPerPage = pagination.totalItemsPerPage || items.length || 24;
+    const totalItems = pagination.totalItems || items.length;
+    const imageBase = dataObj.APP_DOMAIN_CDN_IMAGE;
+
+    const data: PhimResponse = {
+      status: String(json.status || "success"),
+      paginate: {
+        current_page: pagination.currentPage || 1,
+        total_page: Math.max(1, Math.ceil(totalItems / itemsPerPage)),
+        total_items: totalItems,
+        items_per_page: itemsPerPage,
+      },
+      items: items.map((item) => normalizeMovieItem(item, imageBase)),
+    };
+
     if (data && data.items) {
       data.items.sort(comparePhimItems);
     }
@@ -219,12 +486,31 @@ export async function getPhimTheoNam(
   page: number = 1
 ): Promise<PhimResponse | null> {
   try {
-    const res = await fetch(`${API_BASE}/films/nam-phat-hanh/${year}?page=${page}`, {
+    const res = await fetch(`${API_BASE}/v1/api/nam/${year}?page=${page}`, {
       headers: API_HEADERS,
       next: { revalidate: 86400 },
     });
     if (!res.ok) throw new Error("Fetch failed");
-    const data = await res.json();
+    const json = await res.json() as PhimApiListResponseV2;
+
+    const dataObj = json.data || {};
+    const items = (dataObj.items || []);
+    const pagination = dataObj.params?.pagination || {};
+    const itemsPerPage = pagination.totalItemsPerPage || items.length || 24;
+    const totalItems = pagination.totalItems || items.length;
+    const imageBase = dataObj.APP_DOMAIN_CDN_IMAGE;
+
+    const data: PhimResponse = {
+      status: String(json.status || "success"),
+      paginate: {
+        current_page: pagination.currentPage || 1,
+        total_page: Math.max(1, Math.ceil(totalItems / itemsPerPage)),
+        total_items: totalItems,
+        items_per_page: itemsPerPage,
+      },
+      items: items.map((item) => normalizeMovieItem(item, imageBase)),
+    };
+
     if (data && data.items) {
       data.items.sort(comparePhimItems);
     }
@@ -244,7 +530,7 @@ export async function getPhimDetail(
   options: GetPhimDetailOptions = {}
 ): Promise<FilmDetailResponse | null> {
   try {
-    const res = await fetch(`${API_BASE}/film/${slug}`, {
+    const res = await fetch(`${API_BASE}/phim/${slug}`, {
       headers: API_HEADERS,
       next: { revalidate: 3600 },
     });
@@ -254,7 +540,22 @@ export async function getPhimDetail(
       }
       return null;
     }
-    return await res.json();
+    const json = await res.json() as PhimApiDetailResponse;
+    const movie = json.movie;
+    if (!movie) return null;
+
+    const normalizedMovie = normalizeMovieItem(movie);
+    const episodes = json.episodes || movie.episodes;
+
+    return {
+      status: String(json.status || "success"),
+      movie: {
+        ...normalizedMovie,
+        id: movie._id || movie.slug || "",
+        category: buildCategoryRecord(movie),
+        episodes: normalizeEpisodeServers(episodes),
+      },
+    };
   } catch (error) {
     if (!options.silent) {
       console.error(`Error fetching Detail ${slug}:`, error);
@@ -263,20 +564,55 @@ export async function getPhimDetail(
   }
 }
 
-export async function searchPhim(keyword: string): Promise<PhimResponse | null> {
+export interface SearchPhimOptions {
+  page?: number;
+  limit?: number;
+}
+
+export async function searchPhim(
+  keyword: string,
+  options: SearchPhimOptions = {},
+): Promise<PhimResponse | null> {
   if (!keyword) return null;
+  const { page = 1, limit } = options;
+
   try {
-    const res = await fetch(`${API_BASE}/films/search?keyword=${encodeURIComponent(keyword)}`, {
+    const params = new URLSearchParams();
+    params.set("keyword", keyword);
+    if (page > 1) params.set("page", String(page));
+    if (limit) params.set("limit", String(limit));
+
+    const res = await fetch(`${API_BASE}/v1/api/tim-kiem?${params.toString()}`, {
       headers: API_HEADERS,
       cache: "no-store",
     });
     if (!res.ok) throw new Error("Fetch failed");
-    return await res.json();
+    const json = await res.json() as PhimApiListResponseV2;
+
+    const dataObj = json.data || {};
+    const items = (dataObj.items || []);
+    const pagination = dataObj.params?.pagination || {};
+    const itemsPerPage = pagination.totalItemsPerPage || items.length || 24;
+    const totalItems = pagination.totalItems || items.length;
+    const imageBase = dataObj.APP_DOMAIN_CDN_IMAGE;
+
+    return {
+      status: String(json.status || "success"),
+      paginate: {
+        current_page: pagination.currentPage || 1,
+        total_page: Math.max(1, Math.ceil(totalItems / itemsPerPage)),
+        total_items: totalItems,
+        items_per_page: itemsPerPage,
+      },
+      items: items.map((item) => normalizeMovieItem(item, imageBase)),
+    };
   } catch (error) {
     console.error("Error searching phim:", error);
     return null;
   }
 }
+
+// ============ Advanced Filter (unchanged logic, uses updated fetchers) ============
 
 export interface AdvancedFilterParams {
   categorySlug?: string;
@@ -307,10 +643,10 @@ interface FilterSourcePreview {
 
 function getCategoryPath(slug: string) {
   if (slug === "phim-moi" || slug === "phim-moi-cap-nhat") {
-    return "/films/phim-moi-cap-nhat";
+    return "/danh-sach/phim-moi-cap-nhat";
   }
 
-  return `/films/danh-sach/${slug}`;
+  return `/v1/api/danh-sach/${slug}`;
 }
 
 function normalizeFilterValue(value: string | null | undefined) {
@@ -368,14 +704,60 @@ function matchesCategoryFromItem(item: PhimItem, categorySlug: string) {
 
 async function fetchFilmPage(path: string, page: number): Promise<PhimResponse | null> {
   try {
-    const res = await fetch(`${API_BASE}${path}?page=${page}`, {
+    const fullPath = path.startsWith("/danh-sach/")
+      ? `${API_BASE}${path}?page=${page}`
+      : `${API_BASE}${path}?page=${page}`;
+
+    const res = await fetch(fullPath, {
       headers: API_HEADERS,
       next: { revalidate: 1800 },
     });
 
     if (!res.ok) return null;
+    const json = await res.json();
 
-    return (await res.json()) as PhimResponse;
+    // Handle both V1 and V2 response formats
+    if (json.items && Array.isArray(json.items)) {
+      // V1 format
+      const v1 = json as PhimApiListResponseV1;
+      const items = (v1.items || []);
+      const pagination = v1.pagination || {};
+      const itemsPerPage = pagination.totalItemsPerPage || items.length || 24;
+      const totalItems = pagination.totalItems || items.length;
+
+      return {
+        status: String(v1.status || "success"),
+        paginate: {
+          current_page: pagination.currentPage || 1,
+          total_page: Math.max(1, Math.ceil(totalItems / itemsPerPage)),
+          total_items: totalItems,
+          items_per_page: itemsPerPage,
+        },
+        items: items.map((item) => normalizeMovieItem(item)),
+      };
+    } else if (json.data) {
+      // V2 format
+      const v2 = json as PhimApiListResponseV2;
+      const dataObj = v2.data || {};
+      const items = (dataObj.items || []);
+      const pagination = dataObj.params?.pagination || {};
+      const itemsPerPage = pagination.totalItemsPerPage || items.length || 24;
+      const totalItems = pagination.totalItems || items.length;
+      const imageBase = dataObj.APP_DOMAIN_CDN_IMAGE;
+
+      return {
+        status: String(v2.status || "success"),
+        paginate: {
+          current_page: pagination.currentPage || 1,
+          total_page: Math.max(1, Math.ceil(totalItems / itemsPerPage)),
+          total_items: totalItems,
+          items_per_page: itemsPerPage,
+        },
+        items: items.map((item) => normalizeMovieItem(item, imageBase)),
+      };
+    }
+
+    return null;
   } catch {
     return null;
   }
@@ -435,7 +817,7 @@ async function fetchUnionByGenres(genreSlugs: string[], maxPages: number): Promi
       fetchSourcePreview({
         kind: "genre",
         slug,
-        path: `/films/the-loai/${slug}`,
+        path: `/v1/api/the-loai/${slug}`,
       })
     )
   );
@@ -455,7 +837,7 @@ async function fetchUnionByGenres(genreSlugs: string[], maxPages: number): Promi
 
 function getCategoryGroupSlugs(movie: MovieDetail, groupSlug: string) {
   return Object.values(movie.category || {})
-    .filter((entry) => slugifyFilterValue(entry?.group?.name) === groupSlug)
+    .filter((entry) => (entry?.group?.id || slugifyFilterValue(entry?.group?.name)) === groupSlug)
     .flatMap((entry) =>
       Array.isArray(entry?.list)
         ? entry.list.map((item) => slugifyFilterValue(item?.name))
@@ -539,7 +921,7 @@ export async function getPhimByAdvancedFilters(
     candidateSources.push({
       kind: "country",
       slug: params.countrySlug,
-      path: `/films/quoc-gia/${params.countrySlug}`,
+      path: `/v1/api/quoc-gia/${params.countrySlug}`,
     });
   }
 
@@ -547,7 +929,7 @@ export async function getPhimByAdvancedFilters(
     candidateSources.push({
       kind: "year",
       slug: params.year,
-      path: `/films/nam-phat-hanh/${params.year}`,
+      path: `/v1/api/nam/${params.year}`,
     });
   }
 
@@ -555,7 +937,7 @@ export async function getPhimByAdvancedFilters(
     candidateSources.push({
       kind: "genre",
       slug: normalizedGenreSlugs[0],
-      path: `/films/the-loai/${normalizedGenreSlugs[0]}`,
+      path: `/v1/api/the-loai/${normalizedGenreSlugs[0]}`,
     });
   }
 
@@ -690,7 +1072,7 @@ export async function getPhimByAdvancedFiltersPage(
     candidateSources.push({
       kind: "country",
       slug: params.countrySlug,
-      path: `/films/quoc-gia/${params.countrySlug}`,
+      path: `/v1/api/quoc-gia/${params.countrySlug}`,
     });
   }
 
@@ -698,7 +1080,7 @@ export async function getPhimByAdvancedFiltersPage(
     candidateSources.push({
       kind: "year",
       slug: params.year,
-      path: `/films/nam-phat-hanh/${params.year}`,
+      path: `/v1/api/nam/${params.year}`,
     });
   }
 
@@ -706,7 +1088,7 @@ export async function getPhimByAdvancedFiltersPage(
     candidateSources.push({
       kind: "genre",
       slug: normalizedGenreSlugs[0],
-      path: `/films/the-loai/${normalizedGenreSlugs[0]}`,
+      path: `/v1/api/the-loai/${normalizedGenreSlugs[0]}`,
     });
   }
 
@@ -758,7 +1140,6 @@ export async function getPhimByAdvancedFiltersPage(
 
   const needsDetailCheck = needsCountryCheck || needsGenreCheck;
 
-  // Trả về ngay nếu không cần kiểm tra thêm điều kiện nào
   if (!needsCategoryCheck && !needsCountryCheck && !needsYearCheck && !needsGenreCheck) {
     let baseMovies = await fetchFilmsFromPreview(basePreview, maxPages);
     baseMovies = baseMovies.sort(comparePhimItems);
@@ -769,18 +1150,15 @@ export async function getPhimByAdvancedFiltersPage(
     };
   }
 
-  // Thuật toán: Lazy / Chunked Fetching để tăng tốc tối đa
-  // Thay vì tải toàn bộ phim và gọi Detail, chúng ta duyệt API gốc theo từng cụm (chunk)
   const matchedMoviesMap = new Map<string, PhimItem>();
   let currentUpstreamPage = 1;
-  const CHUNK_SIZE = 4; // Tải 4 trang API (~40 phim) mỗi lần quét
+  const CHUNK_SIZE = 4;
 
   while (
     matchedMoviesMap.size < endIndexExclusive &&
     currentUpstreamPage <= maxPages &&
     currentUpstreamPage <= basePreview.totalPages
   ) {
-    // 1. Tải danh sách phim cơ bản theo cụm
     const pagesToFetch = [];
     for (
       let i = 0;
@@ -800,13 +1178,11 @@ export async function getPhimByAdvancedFiltersPage(
       )
     );
 
-    // 2. Lọc sơ bộ (Pre-filter) bằng dữ liệu cơ bản để tránh gọi API Detail không cần thiết
     const candidates: PhimItem[] = [];
     for (const data of pagesData) {
       if (!data?.items) continue;
 
       for (const movie of data.items) {
-        // Đã tồn tại trong danh sách kết quả thì bỏ qua
         if (matchedMoviesMap.has(movie.slug)) continue;
 
         if (
@@ -828,7 +1204,6 @@ export async function getPhimByAdvancedFiltersPage(
 
     if (candidates.length === 0) continue;
 
-    // 3. Nếu không cần kiểm tra Detail (chỉ lọc Category và Update Year), lưu kết quả ngay
     if (!needsDetailCheck) {
       for (const cand of candidates) {
         if (!matchedMoviesMap.has(cand.slug)) {
@@ -838,7 +1213,6 @@ export async function getPhimByAdvancedFiltersPage(
       continue;
     }
 
-    // 4. Gọi API Detail song song cho các candidate còn lại để kiểm tra Thể loại / Quốc gia
     const batchDetails = await Promise.all(
       candidates.map(async (movie) => {
         try {
@@ -873,7 +1247,6 @@ export async function getPhimByAdvancedFiltersPage(
   const allMatched = Array.from(matchedMoviesMap.values());
   const finalSortedMovies = allMatched.sort(comparePhimItems);
   
-  // Chỉ trả về totalItems nếu không có bộ lọc phát sinh nào (do API gốc sẽ không còn đếm chính xác)
   const isReliableCount = !needsCategoryCheck && !needsCountryCheck && !needsYearCheck && !needsGenreCheck;
 
   return {

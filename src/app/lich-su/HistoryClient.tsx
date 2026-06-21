@@ -22,7 +22,7 @@ interface HistoryItem {
 
 export default function HistoryClient({ initialHistory, userId }: { initialHistory: HistoryItem[]; userId?: string }) {
   const [history, setHistory] = useState<HistoryItem[]>(initialHistory);
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
 
   // Guest: load from localStorage if server returned empty
   useEffect(() => {
@@ -147,7 +147,7 @@ export default function HistoryClient({ initialHistory, userId }: { initialHisto
                       {item.movie_name}
                     </h3>
                     <ChevronRight className="w-4 h-4 text-zinc-600 flex-shrink-0" />
-                    <span className="text-sm text-amber-500 font-medium truncate">Tập {item.episode_name}</span>
+                    <span className="text-sm text-amber-500 font-medium truncate">{item.episode_name}</span>
                   </div>
                   
                   <div className="flex items-center gap-4 text-xs text-zinc-500 mb-3">

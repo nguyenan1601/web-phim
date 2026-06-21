@@ -6,6 +6,7 @@ import { Search, X, Loader2, Film, ArrowRight } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { PhimItem } from "@/lib/api";
+import { getLocalSearchPool } from "@/lib/search";
 
 interface SearchModalProps {
   isOpen: boolean;
@@ -24,13 +25,20 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
   const latestResultsRef = useRef<PhimItem[]>([]);
+  const searchRequestRef = useRef(0);
 
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => inputRef.current?.focus(), 100);
     } else {
+      searchRequestRef.current += 1;
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+        debounceRef.current = null;
+      }
       setQuery("");
       setResults([]);
+      latestResultsRef.current = [];
       setVisibleCount(INITIAL_VISIBLE_RESULTS);
     }
   }, [isOpen]);
@@ -47,9 +55,21 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
     return () => window.removeEventListener("keydown", handler);
   }, [isOpen, onClose]);
 
+  // Pre-warm local search pool when modal opens so English searches work immediately
+  useEffect(() => {
+    if (isOpen) {
+      getLocalSearchPool();
+    }
+  }, [isOpen]);
+
   const handleSearch = useCallback(async (keyword: string) => {
+    const requestId = searchRequestRef.current + 1;
+    searchRequestRef.current = requestId;
+
     if (keyword.length < 2) {
+      setIsLoading(false);
       setResults([]);
+      latestResultsRef.current = [];
       setVisibleCount(INITIAL_VISIBLE_RESULTS);
       return;
     }
@@ -60,15 +80,21 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
       const res = await fetch(`/api/search?keyword=${encodeURIComponent(keyword)}&limit=12`);
       if (res.ok) {
         const data = await res.json();
+        if (searchRequestRef.current !== requestId) return;
+
         const items = data.items || [];
         latestResultsRef.current = items;
         setResults(items);
         setVisibleCount(INITIAL_VISIBLE_RESULTS);
       }
     } catch {
-      console.error("Search failed");
+      if (searchRequestRef.current === requestId) {
+        console.error("Search failed");
+      }
     } finally {
-      setIsLoading(false);
+      if (searchRequestRef.current === requestId) {
+        setIsLoading(false);
+      }
     }
   }, []);
 

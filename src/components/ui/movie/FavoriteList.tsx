@@ -36,7 +36,7 @@ export default function FavoriteList({ initialFavorites }: FavoriteListProps) {
       } else {
         toast.success("Đã xóa khỏi danh sách yêu thích");
       }
-    } catch (error) {
+    } catch {
       if (movieToRemove) setFavorites((prev) => [movieToRemove, ...prev]);
       toast.error("Đã xảy ra lỗi khi xóa phim");
     }

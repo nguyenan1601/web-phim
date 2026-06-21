@@ -1,20 +1,22 @@
-import { PhimItem, PhimResponse, comparePhimItems } from "@/lib/api";
+import {
+  PhimItem,
+  comparePhimItems,
+  searchPhim,
+  getPhimDetail,
+  getPhimMoi,
+  getPhimTheoQuocGia,
+} from "@/lib/api";
 
-const API_BASE = "https://phim.nguonc.com/api";
-const API_HEADERS = {
-  accept: "application/json, text/plain, */*",
-  referer: "https://phim.nguonc.com/",
-  "user-agent":
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36",
-};
-const LOCAL_POOL_TTL_MS = 1000 * 60 * 30;
 const SEARCH_CACHE_TTL_MS = 1000 * 60 * 5;
-const FETCH_TIMEOUT_MS = 3000;
 const MAX_SEARCH_PAGES = 3;
+const LOCAL_POOL_TTL_MS = 1000 * 60 * 30;
 const LOCAL_POOL_CONCURRENCY = 8;
+const LOCAL_POOL_WAIT_MS = 15000;
+const KNOWN_MOVIE_CACHE_LIMIT = 500;
+const MAX_DETAIL_HYDRATION_ITEMS = 6;
 const LOCAL_SEARCH_SOURCES = [
-  { path: "/films/quoc-gia/viet-nam", pages: 30 },
-  { path: "/films/phim-moi-cap-nhat", pages: 20 },
+  { path: "viet-nam", pages: 30, fetcher: (page: number) => getPhimTheoQuocGia("viet-nam", page) },
+  { path: "phim-moi-cap-nhat", pages: 20, fetcher: (page: number) => getPhimMoi(page) },
 ];
 
 type SearchableMovie = PhimItem;
@@ -32,8 +34,10 @@ let localPoolCache: {
   expiresAt: number;
   items: PreparedMovie[];
 } | null = null;
+let localPoolPromise: Promise<PreparedMovie[]> | null = null;
 
 const preparedMovieCache = new WeakMap<SearchableMovie, PreparedMovie>();
+const knownMovieCache = new Map<string, SearchableMovie>();
 
 const searchResultCache = new Map<
   string,
@@ -49,7 +53,7 @@ function normalizeSearchValue(value: string | null | undefined) {
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/đ/g, "d")
     .replace(/Đ/g, "D")
-    .replace(/['’`]/g, "")
+    .replace(/[''`]/g, "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
@@ -65,8 +69,42 @@ function splitTokens(value: string | null | undefined) {
   return normalizeSearchValue(value).split(/\s+/).filter(Boolean);
 }
 
+function rememberMovie(item: SearchableMovie | null | undefined) {
+  if (!item?.slug) return item || null;
+
+  const existing = knownMovieCache.get(item.slug);
+  const merged = existing ? { ...existing, ...item } : item;
+
+  knownMovieCache.delete(item.slug);
+  knownMovieCache.set(item.slug, merged);
+
+  if (knownMovieCache.size > KNOWN_MOVIE_CACHE_LIMIT) {
+    const oldestKey = knownMovieCache.keys().next().value;
+    if (oldestKey) knownMovieCache.delete(oldestKey);
+  }
+
+  return merged;
+}
+
+function addMovieCandidate(
+  movieMap: Map<string, SearchableMovie>,
+  item: SearchableMovie | null | undefined,
+) {
+  const remembered = rememberMovie(item);
+
+  if (remembered?.slug) {
+    movieMap.set(remembered.slug, remembered);
+  }
+}
+
 function toTitleCase(value: string) {
   return value.replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function wait<T>(ms: number, value: T) {
+  return new Promise<T>((resolve) => {
+    setTimeout(() => resolve(value), ms);
+  });
 }
 
 function levenshteinDistance(source: string, target: string) {
@@ -196,70 +234,42 @@ function scorePreparedMovie(
   return score;
 }
 
-async function fetchJson<T>(
-  url: string,
-  init?: RequestInit,
-): Promise<T | null> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-
-  try {
-    const res = await fetch(url, {
-      ...init,
-      headers: {
-        ...API_HEADERS,
-        ...init?.headers,
-      },
-      signal: controller.signal,
-    });
-    if (!res.ok) return null;
-    return (await res.json()) as T;
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
-
-async function fetchSearchPage(keyword: string, page = 1) {
-  if (!keyword) return null;
-
-  return fetchJson<PhimResponse>(
-    `${API_BASE}/films/search?keyword=${encodeURIComponent(keyword)}&page=${page}`,
-    { cache: "no-store" },
-  );
-}
-
 async function fetchSearchResults(keyword: string) {
-  const firstPage = await fetchSearchPage(keyword, 1);
-  if (!firstPage) return [];
+  if (!keyword) return [];
+
+  // Fetch page 1 using the new searchPhim signature (page/limit options)
+  const firstPageData = await searchPhim(keyword, { page: 1, limit: 24 });
+  if (!firstPageData) return [];
 
   const movieMap = new Map<string, SearchableMovie>();
 
-  for (const item of firstPage.items || []) {
-    if (item?.slug && !movieMap.has(item.slug)) {
-      movieMap.set(item.slug, item);
-    }
+  for (const item of firstPageData.items || []) {
+    addMovieCandidate(movieMap, item);
   }
 
   const totalPages = Math.min(
-    firstPage.paginate?.total_page || 1,
+    firstPageData.paginate?.total_page || 1,
     MAX_SEARCH_PAGES,
   );
+
+  if (totalPages <= 1) {
+    return Array.from(movieMap.values());
+  }
+
+  // Fetch remaining pages in parallel
   const remainingPages = Array.from(
-    { length: Math.max(totalPages - 1, 0) },
+    { length: totalPages - 1 },
     (_, index) => index + 2,
   );
 
   const pageResults = await Promise.all(
-    remainingPages.map((page) => fetchSearchPage(keyword, page)),
+    remainingPages.map((page) => searchPhim(keyword, { page, limit: 24 })),
   );
 
   for (const data of pageResults) {
-    for (const item of data?.items || []) {
-      if (item?.slug && !movieMap.has(item.slug)) {
-        movieMap.set(item.slug, item);
-      }
+    if (!data) continue;
+    for (const item of data.items || []) {
+      addMovieCandidate(movieMap, item);
     }
   }
 
@@ -269,25 +279,13 @@ async function fetchSearchResults(keyword: string) {
 async function fetchMovieBySlug(slug: string) {
   if (!slug) return null;
 
-  const data = await fetchJson<{ movie?: SearchableMovie }>(
-    `${API_BASE}/film/${slug}`,
-    {
-      next: { revalidate: 3600 },
-    },
-  );
-
-  return data?.movie || null;
+  const data = await getPhimDetail(slug, { silent: true });
+  return rememberMovie(data?.movie);
 }
 
-async function fetchListPage(path: string, page: number) {
-  const data = await fetchJson<PhimResponse>(
-    `${API_BASE}${path}?page=${page}`,
-    {
-      next: { revalidate: 3600 },
-    },
-  );
-
-  return Array.isArray(data?.items) ? data.items : [];
+async function fetchListPage(fetcher: (page: number) => Promise<unknown>, page: number) {
+  const data = await fetcher(page);
+  return (data as { items?: PhimItem[] })?.items || [];
 }
 
 async function runWithConcurrency<T>(
@@ -312,7 +310,7 @@ async function runWithConcurrency<T>(
   return results;
 }
 
-async function getLocalSearchPool() {
+async function buildLocalSearchPool() {
   const now = Date.now();
 
   if (localPoolCache && localPoolCache.expiresAt > now) {
@@ -323,7 +321,7 @@ async function getLocalSearchPool() {
   const pageTasks = LOCAL_SEARCH_SOURCES.flatMap((source) =>
     Array.from(
       { length: source.pages },
-      (_, index) => () => fetchListPage(source.path, index + 1),
+      (_, index) => () => fetchListPage(source.fetcher, index + 1),
     ),
   );
   const pageResults = await runWithConcurrency(
@@ -333,9 +331,7 @@ async function getLocalSearchPool() {
 
   for (const items of pageResults) {
     for (const item of items) {
-      if (item?.slug && !movieMap.has(item.slug)) {
-        movieMap.set(item.slug, item);
-      }
+      addMovieCandidate(movieMap, item);
     }
   }
 
@@ -346,6 +342,27 @@ async function getLocalSearchPool() {
   };
 
   return items;
+}
+
+export async function getLocalSearchPool() {
+  if (localPoolCache && localPoolCache.expiresAt > Date.now()) {
+    return localPoolCache.items;
+  }
+
+  if (!localPoolPromise) {
+    localPoolPromise = buildLocalSearchPool().finally(() => {
+      localPoolPromise = null;
+    });
+  }
+
+  return localPoolPromise;
+}
+
+async function getLocalSearchPoolWithinTimeout() {
+  return Promise.race([
+    getLocalSearchPool(),
+    wait<PreparedMovie[]>(LOCAL_POOL_WAIT_MS, []),
+  ]);
 }
 
 type SearchOptions = {
@@ -368,52 +385,69 @@ export async function searchPhimAdvanced(
     return [];
   }
 
-  const cacheKey = `${normalizeSearchValue(trimmedKeyword)}:${limit || "all"}`;
+  const normalizedKeyword = normalizeSearchValue(trimmedKeyword);
+  const cacheKey = [
+    normalizedKeyword,
+    limit || "all",
+    preferredSlug ? `preferred:${preferredSlug}` : "",
+  ]
+    .filter(Boolean)
+    .join(":");
   const cachedResult = searchResultCache.get(cacheKey);
 
   if (cachedResult && cachedResult.expiresAt > Date.now()) {
     return cachedResult.items;
   }
 
-  const normalizedKeyword = normalizeSearchValue(trimmedKeyword);
   const queryTokens = splitTokens(trimmedKeyword);
   const keywordSlug = slugifyKeyword(trimmedKeyword);
   const titleCaseKeyword = toTitleCase(normalizedKeyword);
   const queryVariants = Array.from(
     new Set(
-      [trimmedKeyword, normalizedKeyword, titleCaseKeyword, keywordSlug].filter(
-        Boolean,
-      ),
+      [
+        trimmedKeyword,
+        trimmedKeyword.toLowerCase(),
+        normalizedKeyword,
+        titleCaseKeyword,
+        keywordSlug,
+      ].filter(Boolean),
     ),
   );
   const preferredMoviePromise =
     preferredSlug && preferredSlug !== keywordSlug
       ? fetchMovieBySlug(preferredSlug)
       : Promise.resolve(null);
-  const [searchResultsList, slugMovie, preferredMovie, localPool] = await Promise.all([
+  const localPoolPromise = getLocalSearchPoolWithinTimeout();
+  const [searchResultsList, slugMovie, preferredMovie] = await Promise.all([
     Promise.all(queryVariants.map(fetchSearchResults)),
     fetchMovieBySlug(keywordSlug),
     preferredMoviePromise,
-    getLocalSearchPool(),
   ]);
 
   const movieMap = new Map<string, SearchableMovie>();
 
   for (const resultItems of searchResultsList) {
     for (const item of resultItems) {
-      if (item?.slug && !movieMap.has(item.slug)) {
-        movieMap.set(item.slug, item);
-      }
+      addMovieCandidate(movieMap, item);
     }
   }
 
-  if (slugMovie?.slug) {
-    movieMap.set(slugMovie.slug, slugMovie);
+  addMovieCandidate(movieMap, slugMovie);
+  addMovieCandidate(movieMap, preferredMovie);
+
+  const detailHydrationItems = Array.from(movieMap.values()).slice(
+    0,
+    MAX_DETAIL_HYDRATION_ITEMS,
+  );
+  const hydratedItems = await Promise.all(
+    detailHydrationItems.map((item) => fetchMovieBySlug(item.slug)),
+  );
+
+  for (const item of hydratedItems) {
+    addMovieCandidate(movieMap, item);
   }
 
-  if (preferredMovie?.slug) {
-    movieMap.set(preferredMovie.slug, preferredMovie);
-  }
+  const localPool = await localPoolPromise;
 
   for (const prepared of localPool) {
     const localScore = scorePreparedMovie(
@@ -421,8 +455,20 @@ export async function searchPhimAdvanced(
       normalizedKeyword,
       queryTokens,
     );
-    if (localScore > 0 && !movieMap.has(prepared.item.slug)) {
-      movieMap.set(prepared.item.slug, prepared.item);
+    if (localScore > 0) {
+      addMovieCandidate(movieMap, prepared.item);
+    }
+  }
+
+  for (const item of Array.from(knownMovieCache.values())) {
+    const knownScore = scorePreparedMovie(
+      prepareMovie(item),
+      normalizedKeyword,
+      queryTokens,
+    );
+
+    if (knownScore > 0) {
+      addMovieCandidate(movieMap, item);
     }
   }
 
@@ -448,10 +494,14 @@ export async function searchPhimAdvanced(
     .map((entry) => entry.item)
     .slice(0, limit);
 
-  searchResultCache.set(cacheKey, {
-    items,
-    expiresAt: Date.now() + SEARCH_CACHE_TTL_MS,
-  });
+  if (items.length > 0) {
+    searchResultCache.set(cacheKey, {
+      items,
+      expiresAt: Date.now() + SEARCH_CACHE_TTL_MS,
+    });
+  } else {
+    searchResultCache.delete(cacheKey);
+  }
 
   return items;
 }

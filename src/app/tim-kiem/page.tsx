@@ -2,10 +2,10 @@ import Link from "next/link";
 import { Search, Film } from "lucide-react";
 import MovieCard from "@/components/ui/movie/MovieCard";
 import Pagination from "@/components/ui/movie/Pagination";
-import { searchPhimAdvanced } from "@/lib/search";
+import { searchPhim } from "@/lib/api";
 
 interface PageProps {
-  searchParams: Promise<{ keyword?: string; page?: string; preferredSlug?: string }>;
+  searchParams: Promise<{ keyword?: string; page?: string }>;
 }
 
 export async function generateMetadata({ searchParams }: PageProps) {
@@ -25,26 +25,28 @@ export async function generateMetadata({ searchParams }: PageProps) {
   };
 }
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 24;
 
 export default async function SearchPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const keyword = params.keyword;
   const pageParam = params.page;
-  const preferredSlug = params.preferredSlug;
 
   const query = keyword?.trim() || "";
   const currentPage = Math.max(1, parseInt(pageParam || "1", 10) || 1);
 
-  const allItems = query.length >= 2 ? await searchPhimAdvanced(query, preferredSlug) : [];
-  const totalItems = allItems.length;
-  const totalPages = Math.ceil(totalItems / PAGE_SIZE);
+  let items: import("@/lib/api").PhimItem[] = [];
+  let totalItems = 0;
+  let totalPages = 0;
 
-  // Slice items for current page
-  const items = allItems.slice(
-    (currentPage - 1) * PAGE_SIZE,
-    currentPage * PAGE_SIZE,
-  );
+  if (query.length >= 2) {
+    const data = await searchPhim(query, { page: currentPage, limit: PAGE_SIZE });
+    if (data) {
+      items = data.items;
+      totalItems = data.paginate.total_items;
+      totalPages = data.paginate.total_page;
+    }
+  }
 
   return (
     <div className="container mx-auto px-4 pt-24 pb-16 min-h-screen">
@@ -61,7 +63,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
             Từ khóa: <span className="text-zinc-200 font-medium">{query}</span>
             {" · "}
             Tìm thấy {totalItems} kết quả{" "}
-            {totalItems > PAGE_SIZE && `(Trang ${currentPage}/${totalPages})`}
+            {totalPages > 1 && `(Trang ${currentPage}/${totalPages})`}
           </p>
         ) : (
           <p className="text-zinc-500 text-sm">
@@ -88,16 +90,6 @@ export default async function SearchPage({ searchParams }: PageProps) {
             totalPages={totalPages}
             baseUrl={`/tim-kiem?keyword=${encodeURIComponent(query)}`}
           />
-
-          <div className="text-sm text-zinc-500 text-center">
-            Không thấy phim phù hợp?{" "}
-            <Link
-              href="/"
-              className="text-amber-400 hover:text-amber-300 transition-colors"
-            >
-              Quay về trang chủ
-            </Link>
-          </div>
         </div>
       ) : (
         <div className="text-center py-16 bg-white/5 rounded-2xl border border-white/10">

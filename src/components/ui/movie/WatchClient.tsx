@@ -71,7 +71,7 @@ export default function WatchClient({
       // Logged-in user: also save to DB
       updateHistoryAction(historyData);
     }
-  }, [filmSlug, currentEpSlug]);
+  }, [currentEp.name, currentEpSlug, filmName, filmSlug, initialTime, poster, userId]);
 
   const saveProgress = async (playedSeconds: number, totalSeconds: number) => {
     if (playedSeconds < 5) return;
@@ -127,7 +127,7 @@ export default function WatchClient({
 
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [filmSlug, currentEpSlug, userId]);
+  }, [currentEp.name, currentEpSlug, filmName, filmSlug, poster, userId]);
 
   return (
     <div className="space-y-6">

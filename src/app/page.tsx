@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getPhimMoi, comparePhimItems } from "@/lib/api";
+import { getPhimMoi, getPhimDetail, comparePhimItems } from "@/lib/api";
 import MovieCard from "@/components/ui/movie/MovieCard";
 import ContinueWatching from "@/components/home/ContinueWatching";
 import { Play } from "lucide-react";
@@ -16,6 +16,11 @@ export default async function Home() {
 
   // Lấy 1 phim làm bộ phim nổi bật (Hero section)
   const heroMovie = phimMoi.length > 0 ? phimMoi[0] : null;
+  // Fetch detail của phim hero để lấy description (V1 không có content)
+  const heroDetail = heroMovie ? await getPhimDetail(heroMovie.slug) : null;
+  if (heroMovie && heroDetail?.movie?.description) {
+    heroMovie.description = heroDetail.movie.description;
+  }
   // Lấy 15 phim cho desktop, ẩn phim cuối trên mobile để grid 2 cột luôn cân bằng
   const gridMovies = phimMoi.slice(1, 16);
 

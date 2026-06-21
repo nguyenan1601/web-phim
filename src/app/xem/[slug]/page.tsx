@@ -78,7 +78,7 @@ export default async function WatchPage({ params, searchParams }: PageProps) {
           </Link>
           <ChevronRight className="w-3.5 h-3.5" />
           <span className="text-amber-400 font-medium">
-            Tập {currentEp.name}
+            {currentEp.name}
           </span>
         </div>
 
@@ -92,7 +92,7 @@ export default async function WatchPage({ params, searchParams }: PageProps) {
           </Link>
           <h1 className="text-xl md:text-2xl font-display font-bold text-white truncate">
             {film.name}{" "}
-            <span className="text-amber-400">- Tập {currentEp.name}</span>
+            <span className="text-amber-400">- {currentEp.name}</span>
           </h1>
         </div>
 

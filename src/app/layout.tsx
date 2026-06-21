@@ -48,11 +48,11 @@ export const metadata: Metadata = {
   authors: [{ name: "XemPhim Team" }],
   creator: "XemPhim",
   publisher: "XemPhim",
-  metadataBase: new URL("https://phim.nguonc.com"),
+  metadataBase: new URL("https://ophim1.com"),
   openGraph: {
     type: "website",
     locale: "vi_VN",
-    url: "https://phim.nguonc.com",
+    url: "https://ophim1.com",
     siteName: "XemPhim",
     title: "XemPhim - Xem Phim Mới Cập Nhật Nhanh Nhất",
     description:

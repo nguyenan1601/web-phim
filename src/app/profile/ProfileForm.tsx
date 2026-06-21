@@ -6,7 +6,9 @@ import { toast } from "sonner";
 import { Save, User, Mail } from "lucide-react";
 
 interface ProfileFormProps {
-  profile: any;
+  profile: {
+    full_name?: string | null;
+  } | null;
   email: string;
 }
 

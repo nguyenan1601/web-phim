@@ -150,7 +150,7 @@ export default function ClientGuestHistory({ serverHistory = [], userId }: Props
                   {item.movie_name}
                 </h3>
                 <p className="text-zinc-500 text-[11px] sm:text-xs mt-0.5 sm:mt-1 truncate">
-                  Đang xem: <span className="text-zinc-300">Tập {item.episode_name || item.episode_slug.replace('tap-', '')}</span>
+                  Đang xem: <span className="text-zinc-300">{item.episode_name || `Tập ${item.episode_slug.replace('tap-', '')}`}</span>
                 </p>
                 <p className="text-[11px] sm:text-xs text-amber-500/70 mt-1.5 sm:mt-2 font-medium">
                   {progress !== null ? `${progress}% hoàn thành` : 'Đang xem'}

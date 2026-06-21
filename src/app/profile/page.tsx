@@ -2,7 +2,7 @@ import { getProfileAction } from "@/app/actions/profile";
 import { getFavoritesAction } from "@/app/actions/favorites";
 import { getHistoryAction } from "@/app/actions/history";
 import ProfileForm from "./ProfileForm";
-import { User, Heart, History, Calendar, Mail } from "lucide-react";
+import { User, Heart, History, Calendar } from "lucide-react";
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";

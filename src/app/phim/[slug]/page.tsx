@@ -5,7 +5,6 @@ import { notFound } from "next/navigation";
 import { Play, Clock, Globe, Star, User, Tag } from "lucide-react";
 import EpisodeList from "@/components/ui/movie/EpisodeList";
 import FavoriteButton from "@/components/ui/movie/FavoriteButton";
-import RelatedMovies from "@/components/ui/movie/RelatedMovies";
 import { checkIsFavoriteAction } from "@/app/actions/favorites";
 import type { Metadata } from "next";
 
@@ -58,13 +57,12 @@ export default async function PhimDetailPage({ params }: PageProps) {
   if (category) {
     for (const key of Object.keys(category)) {
       const group = category[key];
+      const groupId = group.group.id.toLowerCase().trim();
       const groupName = group.group.name.toLowerCase().trim();
-      if (groupName === "thể loại") genres = group.list;
-      if (groupName === "quốc gia") countries = group.list;
+      if (groupId === "the-loai" || groupName === "thể loại") genres = group.list;
+      if (groupId === "quoc-gia" || groupName === "quốc gia") countries = group.list;
     }
   }
-
-  const primaryGenreSlug = genres.length > 0 ? genres[0].id : "";
 
   return (
     <div className="min-h-screen pb-16">
@@ -229,15 +227,6 @@ export default async function PhimDetailPage({ params }: PageProps) {
           </div>
         )}
 
-        {/* Related Movies Section */}
-        {primaryGenreSlug && (
-          <div className="mt-16 border-t border-white/5 pt-12">
-            <RelatedMovies
-              categorySlug={primaryGenreSlug}
-              currentMovieSlug={slug}
-            />
-          </div>
-        )}
       </div>
     </div>
   );

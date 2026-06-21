@@ -77,7 +77,7 @@ export default function Footer() {
         {/* Bottom Bar */}
         <div className="mt-10 pt-6 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-3">
           <p className="text-xs text-zinc-600">
-            © 2026 XemPhim. Dữ liệu cung cấp bởi phim.nguonc.com.
+            © 2026 XemPhim. Dữ liệu cung cấp bởi OPhim.
           </p>
           <p className="text-xs text-zinc-700">
             Dự án phi lợi nhuận · Không kinh doanh
