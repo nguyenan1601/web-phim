@@ -9,6 +9,7 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "img.phimapi.com", pathname: "/**" },
       { protocol: "https", hostname: "ophim.tv", pathname: "/**" },
       { protocol: "https", hostname: "s4.phim1280.tv", pathname: "/**" },
+      { protocol: "https", hostname: "phimapi.com", pathname: "/**" },
     ],
   },
 };

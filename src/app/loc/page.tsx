@@ -3,7 +3,7 @@ import { Film, Search } from "lucide-react";
 import MovieCard from "@/components/ui/movie/MovieCard";
 import ListingFilters from "@/components/ui/movie/ListingFilters";
 import Pagination from "@/components/ui/movie/Pagination";
-import { getPhimByAdvancedFiltersPage } from "@/lib/api";
+import { getPhimByAdvancedFiltersPage, getAllCategories } from "@/lib/api";
 
 interface FilterPageProps {
   searchParams: Promise<{
@@ -81,6 +81,8 @@ export default async function AdvancedFilterPage({
     categorySlug || genreSlugs.length > 0 || countrySlug || year,
   );
 
+  const categories = await getAllCategories();
+
   const result = hasAnyFilter
     ? await getPhimByAdvancedFiltersPage(
         {
@@ -122,6 +124,7 @@ export default async function AdvancedFilterPage({
         currentGenres={genreSlugs}
         currentCountry={countrySlug}
         currentYear={year}
+        genreOptions={categories.map((c) => ({ slug: c.slug, label: c.name }))}
       />
 
       {hasAnyFilter ? (

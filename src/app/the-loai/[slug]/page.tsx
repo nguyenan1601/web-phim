@@ -1,4 +1,4 @@
-import { getPhimTheoTheLoai } from "@/lib/api";
+import { getPhimTheoTheLoai, getAllCategories } from "@/lib/api";
 import MovieCard from "@/components/ui/movie/MovieCard";
 import ListingFilters from "@/components/ui/movie/ListingFilters";
 import Pagination from "@/components/ui/movie/Pagination";
@@ -7,32 +7,6 @@ import { notFound } from "next/navigation";
 
 export const revalidate = 86400;
 
-const THE_LOAI_TITLES: Record<string, string> = {
-  "hanh-dong": "Hành Động",
-  "tinh-cam": "Tình Cảm",
-  "phim-hai": "Hài Hước",
-  "co-trang": "Cổ Trang",
-  "tam-ly": "Tâm Lý",
-  "hinh-su": "Hình Sự",
-  "chien-tranh": "Chiến Tranh",
-  "the-thao": "Thể Thao",
-  "vo-thuat": "Võ Thuật",
-  "khoa-hoc-vien-tuong": "Khoa Học Viễn Tưởng",
-  "phieu-luu": "Phiêu Lưu",
-  "gia-tuong": "Giả Tưởng",
-  "kinh-di": "Kinh Dị",
-  "phim-nhac": "Âm Nhạc",
-  "than-thoai": "Thần Thoại",
-  "tai-lieu": "Tài Liệu",
-  "gia-dinh": "Gia Đình",
-  "chinh-kich": "Chính Kịch",
-  "bi-an": "Bí Ẩn",
-  "hoc-duong": "Học Đường",
-  "kinh-dien": "Kinh Điển",
-  "hoat-hinh": "Hoạt Hình",
-  "phim-18": "Phim 18+",
-};
-
 interface PageProps {
   params: Promise<{ slug: string }>;
   searchParams: Promise<{ page?: string }>;
@@ -40,7 +14,9 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps) {
   const { slug } = await params;
-  const title = THE_LOAI_TITLES[slug] || slug;
+  const categories = await getAllCategories();
+  const category = categories.find((c) => c.slug === slug);
+  const title = category?.name || slug;
   return {
     title: `Thể loại ${title}`,
     description: `Xem phim thể loại ${title} - Tuyển tập phim hay nhất.`,
@@ -52,10 +28,14 @@ export default async function TheLoaiPage({ params, searchParams }: PageProps) {
   const { page: pageParam } = await searchParams;
   const page = parseInt(pageParam || "1", 10);
 
-  const data = await getPhimTheoTheLoai(slug, page);
+  const [data, categories] = await Promise.all([
+    getPhimTheoTheLoai(slug, page),
+    getAllCategories(),
+  ]);
   if (!data || !data.items) return notFound();
 
-  const title = THE_LOAI_TITLES[slug] || slug;
+  const category = categories.find((c) => c.slug === slug);
+  const title = category?.name || slug;
 
   return (
     <div className="container mx-auto px-4 pt-24 pb-16 min-h-screen">
@@ -72,7 +52,10 @@ export default async function TheLoaiPage({ params, searchParams }: PageProps) {
         </p>
       </div>
 
-      <ListingFilters currentGenres={[slug]} />
+      <ListingFilters
+        currentGenres={[slug]}
+        genreOptions={categories.map((c) => ({ slug: c.slug, label: c.name }))}
+      />
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-5">
         {data.items.map((movie) => (

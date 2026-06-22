@@ -4,11 +4,17 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronDown, Filter, Search } from "lucide-react";
 
+interface GenreOption {
+  slug: string;
+  label: string;
+}
+
 interface ListingFiltersProps {
   currentCategory?: string;
   currentGenres?: string[];
   currentCountry?: string;
   currentYear?: string;
+  genreOptions?: GenreOption[];
 }
 
 const CATEGORY_OPTIONS = [
@@ -21,7 +27,7 @@ const CATEGORY_OPTIONS = [
   { slug: "tv-shows", label: "TV Shows" },
 ];
 
-const GENRE_OPTIONS = [
+const FALLBACK_GENRE_OPTIONS = [
   { slug: "hanh-dong", label: "Hành động" },
   { slug: "phieu-luu", label: "Phiêu lưu" },
   { slug: "hoat-hinh", label: "Hoạt hình" },
@@ -80,7 +86,9 @@ export default function ListingFilters({
   currentGenres = [],
   currentCountry = "",
   currentYear = "",
+  genreOptions,
 }: ListingFiltersProps) {
+  const GENRE_OPTIONS = genreOptions && genreOptions.length > 0 ? genreOptions : FALLBACK_GENRE_OPTIONS;
   const router = useRouter();
   const [category, setCategory] = useState(currentCategory);
   const [country, setCountry] = useState(currentCountry);
@@ -95,7 +103,7 @@ export default function ListingFilters({
 
   const genreLabelMap = useMemo(() => {
     return new Map(GENRE_OPTIONS.map((option) => [option.slug, option.label]));
-  }, []);
+  }, [GENRE_OPTIONS]);
 
   const genreDropdownLabel =
     genres.length === 1

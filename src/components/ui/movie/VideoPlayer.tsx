@@ -14,7 +14,7 @@ interface VideoPlayerProps {
 export default function VideoPlayer({ embedUrl }: VideoPlayerProps) {
   if (!embedUrl) {
     return (
-      <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden border border-white/5 shadow-2xl shadow-black/50">
+      <div className="relative w-full bg-black rounded-xl border border-white/5 shadow-2xl shadow-black/50" style={{ paddingBottom: "56.25%" }}>
         <div className="absolute inset-0 flex items-center justify-center bg-black/90 z-20">
           <div className="flex flex-col items-center gap-4 text-red-400 text-center px-6">
             <AlertTriangle className="w-10 h-10" />
@@ -26,10 +26,10 @@ export default function VideoPlayer({ embedUrl }: VideoPlayerProps) {
   }
 
   return (
-    <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden border border-white/5 shadow-2xl shadow-black/50">
+    <div className="relative w-full bg-black rounded-xl border border-white/5 shadow-2xl shadow-black/50" style={{ paddingBottom: "56.25%" }}>
       <iframe
         src={embedUrl}
-        className="w-full h-full"
+        className="absolute inset-0 w-full h-full rounded-xl"
         allowFullScreen
         allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
         style={{ border: "none" }}

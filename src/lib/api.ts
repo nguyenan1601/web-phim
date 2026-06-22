@@ -221,16 +221,24 @@ function getTimeValue(value: PhimApiMovieItem["created"] | PhimApiMovieItem["mod
 
 function normalizeImageUrl(value: string | undefined, imageBase = DEFAULT_IMAGE_BASE) {
   if (!value) return "";
-  if (/^https?:\/\//i.test(value)) return value;
 
-  const cleanValue = value.replace(/^\/+/, "");
-  const cleanBase = imageBase.replace(/\/+$/, "");
+  let fullUrl: string;
 
-  if (cleanValue.startsWith("uploads/")) {
-    return `${cleanBase}/${cleanValue}`;
+  if (/^https?:\/\//i.test(value)) {
+    fullUrl = value;
+  } else {
+    const cleanValue = value.replace(/^\/+/, "");
+    const cleanBase = imageBase.replace(/\/+$/, "");
+
+    if (cleanValue.startsWith("uploads/")) {
+      fullUrl = `${cleanBase}/${cleanValue}`;
+    } else {
+      fullUrl = `${cleanBase}/uploads/movies/${cleanValue}`;
+    }
   }
 
-  return `${cleanBase}/uploads/movies/${cleanValue}`;
+  // Convert to WEBP via phimapi.com image proxy
+  return `https://phimapi.com/image.php?url=${encodeURIComponent(fullUrl)}`;
 }
 
 function normalizeNamedItems(items: PhimApiNamedItem[] | undefined) {
@@ -321,6 +329,28 @@ function normalizeEpisodeServers(episodes: PhimApiEpisodeServer[] | undefined) {
 }
 
 // ============ API fetch functions ============
+
+export interface CategoryItem {
+  _id: string;
+  name: string;
+  slug: string;
+}
+
+export async function getAllCategories(): Promise<CategoryItem[]> {
+  try {
+    const res = await fetch(`${API_BASE}/the-loai`, {
+      headers: API_HEADERS,
+      next: { revalidate: 86400 },
+    });
+    if (!res.ok) return [];
+    const json = await res.json();
+    if (Array.isArray(json)) return json as CategoryItem[];
+    if (json.data && Array.isArray(json.data)) return json.data as CategoryItem[];
+    return [];
+  } catch {
+    return [];
+  }
+}
 
 export async function getPhimMoi(page: number = 1): Promise<PhimResponse | null> {
   try {
