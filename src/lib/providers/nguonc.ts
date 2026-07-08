@@ -20,7 +20,9 @@ import type {
  *
  * Nếu API không reachable, getServers trả null → im lặng fallback.
  */
-const API_BASE = "https://phim.nguonc.com/api";
+const DEFAULT_API_BASE = "https://phim.nguonc.com/api";
+const API_BASE = (process.env.NGUONC_API_BASE || DEFAULT_API_BASE).replace(/\/+$/, "");
+const API_PROXY_URL = process.env.NGUONC_API_PROXY_URL;
 const API_HEADERS = {
   accept: "application/json",
 };
@@ -216,8 +218,17 @@ function getEpisodes(json: NguoncDetailResponse) {
   );
 }
 
+function buildApiUrl(path: string, params?: URLSearchParams) {
+  const upstreamUrl = `${API_BASE}${path}${params ? `?${params.toString()}` : ""}`;
+  if (!API_PROXY_URL) return upstreamUrl;
+
+  const proxyUrl = new URL(API_PROXY_URL);
+  proxyUrl.searchParams.set("url", upstreamUrl);
+  return proxyUrl.toString();
+}
+
 async function fetchDetail(slug: string) {
-  const res = await fetch(`${API_BASE}/film/${slug}`, {
+  const res = await fetch(buildApiUrl(`/film/${slug}`), {
     headers: API_HEADERS,
     next: { revalidate: 3600 },
   });
@@ -227,7 +238,7 @@ async function fetchDetail(slug: string) {
 }
 
 async function fetchList(path: string, page: number) {
-  const res = await fetch(`${API_BASE}${path}?page=${page}`, {
+  const res = await fetch(buildApiUrl(path, new URLSearchParams({ page: String(page) })), {
     headers: API_HEADERS,
     next: { revalidate: 3600 },
   });
@@ -244,7 +255,7 @@ async function resolveSlugBySearch(keywords: string[]) {
     if (!keyword) continue;
 
     const params = new URLSearchParams({ keyword });
-    const res = await fetch(`${API_BASE}/films/search?${params.toString()}`, {
+    const res = await fetch(buildApiUrl("/films/search", params), {
       headers: API_HEADERS,
       next: { revalidate: 3600 },
     });
@@ -404,7 +415,7 @@ export class NguoncEpisodeProvider implements IMovieProvider, IEpisodeProvider {
       const params = new URLSearchParams({ keyword });
       if (options?.page && options.page > 1) params.set("page", String(options.page));
 
-      const res = await fetch(`${API_BASE}/films/search?${params.toString()}`, {
+      const res = await fetch(buildApiUrl("/films/search", params), {
         headers: API_HEADERS,
         cache: "no-store",
       });
