@@ -1,5 +1,6 @@
 import type {
   IMovieProvider,
+  IEpisodeProvider,
   FilmDetailResult,
   PhimResponse,
   EpisodeItem,
@@ -118,6 +119,15 @@ function normalizeEpisodeText(value: unknown) {
   return "";
 }
 
+function normalizeSearchText(value: string | undefined) {
+  return (value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
 function normalizeMovieItem(item: PhimApiMovieItem): PhimItem {
   return {
     name: item.name || "",
@@ -155,10 +165,10 @@ function normalizeEpisodeServers(episodes: PhimApiEpisodeServer[] | undefined) {
     .filter((server: EpisodeServer) => server.items.length > 0);
 }
 
-export class KkphimProvider implements IMovieProvider {
+export class KkphimProvider implements IMovieProvider, IEpisodeProvider {
   readonly name = "kkphim";
   readonly label = "KKPhim";
-  readonly priority = 1; // default provider, highest priority
+  readonly priority = 20;
 
   async getDetail(slug: string, options?: { silent?: boolean }): Promise<FilmDetailResult | null> {
     try {
@@ -281,6 +291,49 @@ export class KkphimProvider implements IMovieProvider {
       console.error("[KKPhim] search:", error);
       return null;
     }
+  }
+
+  async getServers(
+    slug: string,
+    options?: { silent?: boolean; movieName?: string; originalName?: string }
+  ): Promise<EpisodeServer[] | null> {
+    let result = await this.getDetail(slug, { silent: options?.silent });
+
+    if (!result?.movie.episodes?.length) {
+      const resolvedSlug = await this.resolveSlugBySearch([
+        options?.movieName || "",
+        options?.originalName || "",
+        slug,
+      ]);
+
+      if (resolvedSlug && resolvedSlug !== slug) {
+        result = await this.getDetail(resolvedSlug, { silent: true });
+      }
+    }
+
+    return result?.movie.episodes?.length ? result.movie.episodes : null;
+  }
+
+  private async resolveSlugBySearch(keywords: string[]) {
+    const targets = keywords.map(normalizeSearchText).filter(Boolean);
+    if (targets.length === 0) return null;
+
+    for (const keyword of keywords) {
+      if (!keyword) continue;
+
+      const data = await this.search(keyword, { limit: 8 });
+      const items = data?.items || [];
+      const exact = items.find((item) => {
+        const name = normalizeSearchText(item.name);
+        const originalName = normalizeSearchText(item.original_name);
+        return targets.includes(name) || targets.includes(originalName);
+      });
+
+      if (exact?.slug) return exact.slug;
+      if (items[0]?.slug) return items[0].slug;
+    }
+
+    return null;
   }
 }
 

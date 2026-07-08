@@ -18,9 +18,11 @@ class ProviderRegistry {
 
   constructor() {
     // Đăng ký provider mặc định
+    this.register(nguoncProvider);
     this.register(kkphimProvider);
     // Đăng ký episode providers mặc định
     this.registerEpisode(nguoncProvider);
+    this.registerEpisode(kkphimProvider);
   }
 
   /** Đăng ký một provider mới */
@@ -78,7 +80,7 @@ class ProviderRegistry {
     const results = await Promise.allSettled(
       all.map((p) =>
         p.getServers(slug, {
-          silent: options?.silent,
+          silent: options?.silent ?? true,
           movieName: options?.movieName,
           originalName: options?.originalName,
         }).then((servers) => ({

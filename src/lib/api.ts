@@ -1,4 +1,5 @@
 import { providerRegistry } from "./providers/registry";
+import { nguoncProvider } from "./providers/nguonc";
 
 const API_BASE = "https://phimapi.com";
 const DEFAULT_IMAGE_BASE = "https://phimimg.com";
@@ -364,6 +365,12 @@ export async function getPhimMoi(
   page: number = 1,
   options: { silent?: boolean } = {}
 ): Promise<PhimResponse | null> {
+  const nguoncData = await nguoncProvider.getPhimMoi(page, options);
+  if (nguoncData?.items) {
+    nguoncData.items.sort(comparePhimItems);
+    return nguoncData;
+  }
+
   try {
     const res = await fetch(`${API_BASE}/danh-sach/phim-moi-cap-nhat?page=${page}`, {
       headers: API_HEADERS,
@@ -409,6 +416,12 @@ export async function getPhimTheoDanhSach(
   slug: string,
   page: number = 1
 ): Promise<PhimResponse | null> {
+  const nguoncData = await nguoncProvider.getDanhSach(slug, page, { silent: true });
+  if (nguoncData?.items) {
+    nguoncData.items.sort(comparePhimItems);
+    return nguoncData;
+  }
+
   try {
     const res = await fetch(`${API_BASE}/v1/api/danh-sach/${slug}?page=${page}`, {
       headers: API_HEADERS,
@@ -450,6 +463,13 @@ export async function getPhimTheoTheLoai(
   page: number = 1
 ): Promise<PhimResponse | null> {
   if (!slug) return null;
+
+  const nguoncData = await nguoncProvider.getTheLoai(slug, page, { silent: true });
+  if (nguoncData?.items) {
+    nguoncData.items.sort(comparePhimItems);
+    return nguoncData;
+  }
+
   try {
     const res = await fetch(`${API_BASE}/v1/api/the-loai/${slug}?page=${page}`, {
       headers: API_HEADERS,
@@ -494,6 +514,12 @@ export async function getPhimTheoQuocGia(
   page: number = 1,
   options: { silent?: boolean } = {}
 ): Promise<PhimResponse | null> {
+  const nguoncData = await nguoncProvider.getQuocGia(slug, page, options);
+  if (nguoncData?.items) {
+    nguoncData.items.sort(comparePhimItems);
+    return nguoncData;
+  }
+
   try {
     const res = await fetch(`${API_BASE}/v1/api/quoc-gia/${slug}?page=${page}`, {
       headers: API_HEADERS,
@@ -541,6 +567,12 @@ export async function getPhimTheoNam(
   year: string,
   page: number = 1
 ): Promise<PhimResponse | null> {
+  const nguoncData = await nguoncProvider.getNam(year, page, { silent: true });
+  if (nguoncData?.items) {
+    nguoncData.items.sort(comparePhimItems);
+    return nguoncData;
+  }
+
   try {
     const res = await fetch(`${API_BASE}/v1/api/nam/${year}?page=${page}`, {
       headers: API_HEADERS,
@@ -585,6 +617,17 @@ export async function getPhimDetail(
   slug: string,
   options: GetPhimDetailOptions = {}
 ): Promise<FilmDetailResponse | null> {
+  const providerResult = await providerRegistry.getDetailFallback(slug, {
+    silent: true,
+    preferredProvider: "nguonc",
+  });
+  if (providerResult) {
+    return {
+      status: providerResult.status,
+      movie: providerResult.movie as FilmDetailResponse["movie"],
+    };
+  }
+
   try {
     const res = await fetch(`${API_BASE}/phim/${slug}`, {
       headers: API_HEADERS,
@@ -660,6 +703,15 @@ export async function searchPhim(
 ): Promise<PhimResponse | null> {
   if (!keyword) return null;
   const { page = 1, limit } = options;
+
+  const nguoncData = await nguoncProvider.search(keyword, {
+    page,
+    limit,
+    silent: true,
+  });
+  if (nguoncData?.items) {
+    return nguoncData;
+  }
 
   try {
     const params = new URLSearchParams();
@@ -788,6 +840,9 @@ function matchesCategoryFromItem(item: PhimItem, categorySlug: string) {
 }
 
 async function fetchFilmPage(path: string, page: number): Promise<PhimResponse | null> {
+  const nguoncData = await nguoncProvider.getByLegacyPath(path, page, { silent: true });
+  if (nguoncData) return nguoncData;
+
   try {
     const fullPath = path.startsWith("/danh-sach/")
       ? `${API_BASE}${path}?page=${page}`
