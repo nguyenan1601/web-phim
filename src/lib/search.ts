@@ -15,8 +15,8 @@ const LOCAL_POOL_WAIT_MS = 15000;
 const KNOWN_MOVIE_CACHE_LIMIT = 500;
 const MAX_DETAIL_HYDRATION_ITEMS = 6;
 const LOCAL_SEARCH_SOURCES = [
-  { path: "viet-nam", pages: 30, fetcher: (page: number) => getPhimTheoQuocGia("viet-nam", page) },
-  { path: "phim-moi-cap-nhat", pages: 20, fetcher: (page: number) => getPhimMoi(page) },
+  { path: "viet-nam", pages: 30, fetcher: (page: number) => getPhimTheoQuocGia("viet-nam", page, { silent: true }) },
+  { path: "phim-moi-cap-nhat", pages: 20, fetcher: (page: number) => getPhimMoi(page, { silent: true }) },
 ];
 
 type SearchableMovie = PhimItem;
@@ -284,8 +284,12 @@ async function fetchMovieBySlug(slug: string) {
 }
 
 async function fetchListPage(fetcher: (page: number) => Promise<unknown>, page: number) {
-  const data = await fetcher(page);
-  return (data as { items?: PhimItem[] })?.items || [];
+  try {
+    const data = await fetcher(page);
+    return (data as { items?: PhimItem[] })?.items || [];
+  } catch {
+    return [];
+  }
 }
 
 async function runWithConcurrency<T>(

@@ -1,4 +1,4 @@
-import { getPhimDetail } from "@/lib/api";
+import { getPhimDetail, getPhimDetailMerged } from "@/lib/api";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, ChevronRight } from "lucide-react";
@@ -29,12 +29,15 @@ export default async function WatchPage({ params, searchParams }: PageProps) {
   const { slug } = await params;
   const { tap, sv } = await searchParams;
 
-  const data = await getPhimDetail(slug);
+  const data = await getPhimDetailMerged(slug);
   if (!data?.movie || !data.movie.episodes?.length) return notFound();
 
   const film = data.movie;
   const { episodes } = film;
-  const serverIdx = Math.min(parseInt(sv || "0", 10), episodes.length - 1);
+  const requestedServerIdx = Number.parseInt(sv || "0", 10);
+  const serverIdx = Number.isFinite(requestedServerIdx)
+    ? Math.min(Math.max(requestedServerIdx, 0), episodes.length - 1)
+    : 0;
   const currentServer = episodes[serverIdx];
   const currentEp =
     currentServer.items.find((e) => e.slug === tap) || currentServer.items[0];

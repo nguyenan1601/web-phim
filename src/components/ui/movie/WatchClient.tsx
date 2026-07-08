@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import VideoPlayer from "./VideoPlayer";
 import { updateHistoryAction } from "@/app/actions/history";
 import { saveLocalHistory } from "@/lib/localHistory";
-import { Play, Server } from "lucide-react";
+import { ChevronDown, Globe, Play, Server } from "lucide-react";
 
 interface Episode {
   name: string;
@@ -17,6 +17,7 @@ interface Episode {
 interface EpisodeServer {
   server_name: string;
   items: Episode[];
+  source?: string;
 }
 
 interface WatchClientProps {
@@ -32,6 +33,16 @@ interface WatchClientProps {
   userId?: string;
 }
 
+const PROVIDER_LABELS: Record<string, string> = {
+  kkphim: "KKPhim",
+  nguonc: "NguonC",
+  phimmoi: "PhimMoi",
+};
+
+function getServerSource(server: EpisodeServer) {
+  return server.source || "kkphim";
+}
+
 export default function WatchClient({
   m3u8,
   embedUrl,
@@ -45,12 +56,49 @@ export default function WatchClient({
   userId,
 }: WatchClientProps) {
   const [activeServer, setActiveServer] = useState(currentServerIdx);
+  const [activeSource, setActiveSource] = useState(() =>
+    getServerSource(episodes[Math.min(currentServerIdx, episodes.length - 1)] || episodes[0])
+  );
 
-  const currentServer = episodes[Math.min(activeServer, episodes.length - 1)];
+  const providerOptions = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const server of episodes) {
+      const source = getServerSource(server);
+      counts.set(source, (counts.get(source) || 0) + 1);
+    }
+
+    return Array.from(counts.entries()).map(([source, count]) => ({
+      source,
+      count,
+      label: PROVIDER_LABELS[source] || source,
+    }));
+  }, [episodes]);
+
+  const filteredServers = useMemo(
+    () =>
+      episodes
+        .map((server, index) => ({ server, index }))
+        .filter(({ server }) => getServerSource(server) === activeSource),
+    [activeSource, episodes]
+  );
+
+  const activeEntry =
+    filteredServers.find(({ index }) => index === activeServer) ||
+    filteredServers[0] ||
+    { server: episodes[Math.min(activeServer, episodes.length - 1)], index: activeServer };
+  const currentServer = activeEntry.server;
+  const currentServerIndex = activeEntry.index;
   const uniqueEpisodes = currentServer.items.filter(
     (episode, index, items) => index === items.findIndex((item) => item.slug === episode.slug)
   );
   const currentEp = currentServer.items.find((e) => e.slug === currentEpSlug) || currentServer.items[0];
+  const activeEpSlug = currentEp.slug;
+
+  const handleProviderChange = (source: string) => {
+    const firstServerIdx = episodes.findIndex((server) => getServerSource(server) === source);
+    setActiveSource(source);
+    setActiveServer(firstServerIdx >= 0 ? firstServerIdx : 0);
+  };
 
   // Save watch history when user opens the watch page or episode changes
   useEffect(() => {
@@ -58,7 +106,7 @@ export default function WatchClient({
       movie_slug: filmSlug,
       movie_name: filmName,
       movie_thumb: poster,
-      episode_slug: currentEpSlug,
+      episode_slug: activeEpSlug,
       episode_name: currentEp.name,
       progress_seconds: initialTime || 0,
       total_seconds: 0,
@@ -71,7 +119,7 @@ export default function WatchClient({
       // Logged-in user: also save to DB
       updateHistoryAction(historyData);
     }
-  }, [currentEp.name, currentEpSlug, filmName, filmSlug, initialTime, poster, userId]);
+  }, [activeEpSlug, currentEp.name, filmName, filmSlug, initialTime, poster, userId]);
 
   const saveProgress = async (playedSeconds: number, totalSeconds: number) => {
     if (playedSeconds < 5) return;
@@ -80,7 +128,7 @@ export default function WatchClient({
       movie_slug: filmSlug,
       movie_name: filmName,
       movie_thumb: poster,
-      episode_slug: currentEpSlug,
+      episode_slug: activeEpSlug,
       episode_name: currentEp.name,
       progress_seconds: Math.floor(playedSeconds),
       total_seconds: Math.floor(totalSeconds),
@@ -112,7 +160,7 @@ export default function WatchClient({
           movie_slug: filmSlug,
           movie_name: filmName,
           movie_thumb: poster,
-          episode_slug: currentEpSlug,
+          episode_slug: activeEpSlug,
           episode_name: currentEp.name,
           progress_seconds: Math.floor(video.currentTime),
           total_seconds: Math.floor(video.duration || 0),
@@ -127,7 +175,7 @@ export default function WatchClient({
 
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [currentEp.name, currentEpSlug, filmName, filmSlug, poster, userId]);
+  }, [activeEpSlug, currentEp.name, filmName, filmSlug, poster, userId]);
 
   return (
     <div className="space-y-6">
@@ -136,19 +184,53 @@ export default function WatchClient({
         src={currentEp?.m3u8 || m3u8} 
         embedUrl={currentEp?.embed || embedUrl}
         poster={poster} 
-        initialTime={activeServer === currentServerIdx ? initialTime : 0}
+        initialTime={currentServerIndex === currentServerIdx && activeEpSlug === currentEpSlug ? initialTime : 0}
         onProgress={handleProgress}
       />
 
+      <section className="space-y-5">
+        <h2 className="text-2xl font-display font-semibold text-white flex items-center gap-3">
+          <span className="w-1.5 h-8 bg-amber-500 rounded-full" />
+          Danh Sách Tập Phim
+        </h2>
+
+      {providerOptions.length > 0 && (
+        <div className="flex flex-wrap items-center gap-3">
+          <label
+            htmlFor="provider-source"
+            className="inline-flex items-center gap-2 text-sm font-medium text-zinc-300"
+          >
+            <Globe className="w-4 h-4 text-amber-400" />
+            Nguồn phát
+          </label>
+          <div className="relative">
+            <select
+              id="provider-source"
+              value={activeSource}
+              disabled={providerOptions.length <= 1}
+              onChange={(event) => handleProviderChange(event.target.value)}
+              className="h-10 appearance-none rounded-lg border border-white/10 bg-zinc-900/80 pl-3 pr-9 text-sm font-medium text-white outline-none transition-colors hover:border-amber-500/30 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 disabled:cursor-not-allowed disabled:text-zinc-500 disabled:hover:border-white/10"
+            >
+              {providerOptions.map((provider) => (
+                <option key={provider.source} value={provider.source}>
+                  {provider.label} ({provider.count})
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+          </div>
+        </div>
+      )}
+
       {/* Server Selection */}
-      {episodes.length > 1 && (
+      {filteredServers.length > 1 && (
         <div className="flex flex-wrap gap-2">
-          {episodes.map((server, idx) => (
+          {filteredServers.map(({ server, index }) => (
             <button
-              key={idx}
-              onClick={() => setActiveServer(idx)}
+              key={index}
+              onClick={() => setActiveServer(index)}
               className={`inline-flex max-w-full items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                idx === activeServer
+                index === currentServerIndex
                   ? "bg-amber-500 text-black shadow-lg shadow-amber-500/20"
                   : "bg-zinc-800/60 border border-white/5 text-zinc-400 hover:text-white hover:border-amber-500/30"
               }`}
@@ -162,17 +244,17 @@ export default function WatchClient({
 
       {/* Episode Grid */}
       <div>
-        <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+        <h3 className="sr-only">
           <span className="w-1 h-6 bg-amber-500 rounded-full" />
           Chọn tập
         </h3>
         <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-14 gap-2">
           {uniqueEpisodes.map((ep, index) => {
-            const isActive = ep.slug === currentEpSlug && activeServer === currentServerIdx;
+            const isActive = ep.slug === activeEpSlug;
             return (
               <Link
-                key={`${activeServer}-${ep.slug}-${index}`}
-                href={`/xem/${filmSlug}?tap=${ep.slug}&sv=${activeServer}`}
+                key={`${currentServerIndex}-${ep.slug}-${index}`}
+                href={`/xem/${filmSlug}?tap=${ep.slug}&sv=${currentServerIndex}`}
                 className={`min-w-0 truncate flex items-center justify-center gap-1 px-2 py-2.5 rounded-lg text-sm font-medium transition-all ${
                   isActive
                     ? "bg-amber-500 text-black shadow-lg shadow-amber-500/25 ring-2 ring-amber-400/50"
@@ -186,6 +268,7 @@ export default function WatchClient({
           })}
         </div>
       </div>
+      </section>
     </div>
   );
 }

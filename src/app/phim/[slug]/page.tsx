@@ -1,4 +1,4 @@
-import { getPhimDetail } from "@/lib/api";
+import { getPhimDetail, getPhimDetailMerged } from "@/lib/api";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -43,7 +43,7 @@ export async function generateMetadata({
 
 export default async function PhimDetailPage({ params }: PageProps) {
   const { slug } = await params;
-  const data = await getPhimDetail(slug);
+  const data = await getPhimDetailMerged(slug);
   if (!data?.movie) return notFound();
 
   const film = data.movie;

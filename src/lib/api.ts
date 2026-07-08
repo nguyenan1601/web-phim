@@ -1,3 +1,5 @@
+import { providerRegistry } from "./providers/registry";
+
 const API_BASE = "https://phimapi.com";
 const DEFAULT_IMAGE_BASE = "https://phimimg.com";
 const API_HEADERS = {
@@ -137,8 +139,8 @@ interface PhimApiMovieItem {
   content?: string;
   type?: string;
   status?: string;
-  episode_current?: string;
-  episode_total?: string;
+  episode_current?: unknown;
+  episode_total?: unknown;
   time?: string;
   quality?: string;
   lang?: string;
@@ -281,11 +283,17 @@ function buildCategoryRecord(item: PhimApiMovieItem): MovieDetail["category"] {
 function parseEpisodeTotal(item: PhimApiMovieItem) {
   if (item.type === "single" || item.type === "movie") return 1;
 
-  const source = item.episode_total || item.episode_current || "";
+  const source = normalizeEpisodeText(item.episode_total || item.episode_current);
   if (/full/i.test(source)) return 1;
 
   const match = source.match(/\d+/);
   return match ? Number(match[0]) : 2;
+}
+
+function normalizeEpisodeText(value: unknown) {
+  if (typeof value === "string") return value;
+  if (typeof value === "number") return String(value);
+  return "";
 }
 
 function normalizeMovieItem(
@@ -302,7 +310,7 @@ function normalizeMovieItem(
     modified: getTimeValue(item.modified),
     description: item.content || "",
     total_episodes: parseEpisodeTotal(item),
-    current_episode: item.episode_current || "",
+    current_episode: normalizeEpisodeText(item.episode_current),
     time: item.time || "",
     quality: item.quality || "",
     language: item.lang || "",
@@ -352,13 +360,21 @@ export async function getAllCategories(): Promise<CategoryItem[]> {
   }
 }
 
-export async function getPhimMoi(page: number = 1): Promise<PhimResponse | null> {
+export async function getPhimMoi(
+  page: number = 1,
+  options: { silent?: boolean } = {}
+): Promise<PhimResponse | null> {
   try {
     const res = await fetch(`${API_BASE}/danh-sach/phim-moi-cap-nhat?page=${page}`, {
       headers: API_HEADERS,
       next: { revalidate: 3600 },
     });
-    if (!res.ok) throw new Error("Fetch failed");
+    if (!res.ok) {
+      if (!options.silent) {
+        console.warn(`Error fetching Phim Moi page ${page}: ${res.status}`);
+      }
+      return null;
+    }
     const json = await res.json() as PhimApiListResponseV1;
 
     const items = (json.items || []);
@@ -382,7 +398,9 @@ export async function getPhimMoi(page: number = 1): Promise<PhimResponse | null>
     }
     return data;
   } catch (error) {
-    console.error("Error fetching Phim Moi:", error);
+    if (!options.silent) {
+      console.warn("Error fetching Phim Moi:", error);
+    }
     return null;
   }
 }
@@ -473,14 +491,20 @@ export async function getPhimTheoTheLoai(
 
 export async function getPhimTheoQuocGia(
   slug: string,
-  page: number = 1
+  page: number = 1,
+  options: { silent?: boolean } = {}
 ): Promise<PhimResponse | null> {
   try {
     const res = await fetch(`${API_BASE}/v1/api/quoc-gia/${slug}?page=${page}`, {
       headers: API_HEADERS,
       next: { revalidate: 86400 },
     });
-    if (!res.ok) throw new Error("Fetch failed");
+    if (!res.ok) {
+      if (!options.silent) {
+        console.warn(`Error fetching Quoc Gia ${slug} page ${page}: ${res.status}`);
+      }
+      return null;
+    }
     const json = await res.json() as PhimApiListResponseV2;
 
     const dataObj = json.data || {};
@@ -506,7 +530,9 @@ export async function getPhimTheoQuocGia(
     }
     return data;
   } catch (error) {
-    console.error(`Error fetching Quoc Gia ${slug}:`, error);
+    if (!options.silent) {
+      console.warn(`Error fetching Quoc Gia ${slug}:`, error);
+    }
     return null;
   }
 }
@@ -592,6 +618,35 @@ export async function getPhimDetail(
     }
     return null;
   }
+}
+
+/**
+ * getPhimDetailMerged
+ *
+ * Lấy chi tiết phim từ provider chính (kkphim → fallback) rồi merge thêm
+ * episodes từ tất cả episode providers (nguonc, ...).
+ * Dùng function này thay cho getPhimDetail khi muốn xem được nhiều server.
+ */
+export async function getPhimDetailMerged(
+  slug: string,
+  options?: { silent?: boolean; preferredProvider?: string }
+): Promise<FilmDetailResponse | null> {
+  const result = await providerRegistry.getDetailWithMergedServers(slug, options);
+  if (!result) return null;
+
+  // Convert về FilmDetailResponse (bỏ source field)
+  // cast an toàn vì movie từ provider luôn có category đầy đủ
+  return {
+    status: result.status,
+    movie: result.movie as FilmDetailResponse["movie"],
+  };
+}
+
+/**
+ * Lấy danh sách episode providers đã đăng ký (dùng cho UI chọn nguồn)
+ */
+export function getEpisodeProviderList() {
+  return providerRegistry.getEpisodeProviderDetails();
 }
 
 export interface SearchPhimOptions {
@@ -1286,4 +1341,41 @@ export async function getPhimByAdvancedFiltersPage(
       (currentUpstreamPage <= basePreview.totalPages && currentUpstreamPage <= maxPages),
     totalItems: isReliableCount ? basePreview.totalItems : undefined,
   };
+}
+
+// ──────────────────────────────────────────
+// Multi-Provider Adapter Functions
+// Dùng ProviderRegistry để fallback qua nhiều nguồn
+// Giữ backward compatibility hoàn toàn
+// ──────────────────────────────────────────
+
+/**
+ * Lấy chi tiết phim từ provider đầu tiên tìm thấy (fallback).
+ * Giống getPhimDetail nhưng tự động thử nhiều providers.
+ *
+ * @deprecated Không deprecate - dùng song song với getPhimDetail cũ,
+ *             ưu tiên xài hàm này cho mới khi cần fallback
+ */
+export async function getPhimDetailWithFallback(
+  slug: string,
+  options?: { silent?: boolean; preferredProvider?: string }
+) {
+  return providerRegistry.getDetailFallback(slug, {
+    silent: options?.silent,
+    preferredProvider: options?.preferredProvider,
+  });
+}
+
+/**
+ * Lấy chi tiết phim từ TẤT CẢ providers.
+ * Trả về mảng các kết quả, mỗi kết quả gắn source.
+ * Dùng để UI hiển thị multi-source cho người dùng chọn.
+ */
+export async function getPhimDetailFromAll(slug: string, options?: { silent?: boolean }) {
+  return providerRegistry.getDetailFromAll(slug, options);
+}
+
+/** Lấy danh sách providers đã đăng ký */
+export function getRegisteredProviders() {
+  return providerRegistry.getDetails();
 }
