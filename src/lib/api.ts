@@ -1,11 +1,20 @@
 import { providerRegistry } from "./providers/registry";
 import { nguoncProvider } from "./providers/nguonc";
+import { buildProxyUrl } from "./proxy";
 
 const API_BASE = "https://phimapi.com";
 const DEFAULT_IMAGE_BASE = "https://phimimg.com";
 const API_HEADERS = {
   accept: "application/json",
 };
+
+/**
+ * Fetch qua proxy (khi USE_API_PROXY=true) hoặc trực tiếp.
+ * Dùng cho tất cả request tới API_BASE.
+ */
+function apiFetch(path: string, options?: RequestInit) {
+  return fetch(buildProxyUrl(`${API_BASE}${path}`), options);
+}
 
 export interface PhimItem {
   name: string;
@@ -347,7 +356,7 @@ export interface CategoryItem {
 
 export async function getAllCategories(): Promise<CategoryItem[]> {
   try {
-    const res = await fetch(`${API_BASE}/the-loai`, {
+    const res = await apiFetch(`/the-loai`, {
       headers: API_HEADERS,
       next: { revalidate: 86400 },
     });
@@ -372,7 +381,7 @@ export async function getPhimMoi(
   }
 
   try {
-    const res = await fetch(`${API_BASE}/danh-sach/phim-moi-cap-nhat?page=${page}`, {
+    const res = await apiFetch(`/danh-sach/phim-moi-cap-nhat?page=${page}`, {
       headers: API_HEADERS,
       next: { revalidate: 3600 },
     });
@@ -423,7 +432,7 @@ export async function getPhimTheoDanhSach(
   }
 
   try {
-    const res = await fetch(`${API_BASE}/v1/api/danh-sach/${slug}?page=${page}`, {
+    const res = await apiFetch(`/v1/api/danh-sach/${slug}?page=${page}`, {
       headers: API_HEADERS,
       next: { revalidate: 3600 },
     });
@@ -471,7 +480,7 @@ export async function getPhimTheoTheLoai(
   }
 
   try {
-    const res = await fetch(`${API_BASE}/v1/api/the-loai/${slug}?page=${page}`, {
+    const res = await apiFetch(`/v1/api/the-loai/${slug}?page=${page}`, {
       headers: API_HEADERS,
       next: { revalidate: 86400 },
     });
@@ -521,7 +530,7 @@ export async function getPhimTheoQuocGia(
   }
 
   try {
-    const res = await fetch(`${API_BASE}/v1/api/quoc-gia/${slug}?page=${page}`, {
+    const res = await apiFetch(`/v1/api/quoc-gia/${slug}?page=${page}`, {
       headers: API_HEADERS,
       next: { revalidate: 86400 },
     });
@@ -574,7 +583,7 @@ export async function getPhimTheoNam(
   }
 
   try {
-    const res = await fetch(`${API_BASE}/v1/api/nam/${year}?page=${page}`, {
+    const res = await apiFetch(`/v1/api/nam/${year}?page=${page}`, {
       headers: API_HEADERS,
       next: { revalidate: 86400 },
     });
@@ -629,7 +638,7 @@ export async function getPhimDetail(
   }
 
   try {
-    const res = await fetch(`${API_BASE}/phim/${slug}`, {
+    const res = await apiFetch(`/phim/${slug}`, {
       headers: API_HEADERS,
       next: { revalidate: 3600 },
     });
@@ -719,7 +728,7 @@ export async function searchPhim(
     if (page > 1) params.set("page", String(page));
     if (limit) params.set("limit", String(limit));
 
-    const res = await fetch(`${API_BASE}/v1/api/tim-kiem?${params.toString()}`, {
+    const res = await apiFetch(`/v1/api/tim-kiem?${params.toString()}`, {
       headers: API_HEADERS,
       cache: "no-store",
     });
@@ -848,7 +857,7 @@ async function fetchFilmPage(path: string, page: number): Promise<PhimResponse |
       ? `${API_BASE}${path}?page=${page}`
       : `${API_BASE}${path}?page=${page}`;
 
-    const res = await fetch(fullPath, {
+    const res = await fetch(buildProxyUrl(fullPath), {
       headers: API_HEADERS,
       next: { revalidate: 1800 },
     });

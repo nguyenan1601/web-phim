@@ -7,12 +7,20 @@ import type {
   EpisodeServer,
   PhimItem,
 } from "./types";
+import { buildProxyUrl } from "../proxy";
 
 const API_BASE = "https://phimapi.com";
 const DEFAULT_IMAGE_BASE = "https://phimimg.com";
 const API_HEADERS = {
   accept: "application/json",
 };
+
+/**
+ * Fetch qua proxy (khi USE_API_PROXY=true) hoặc trực tiếp.
+ */
+function apiFetch(path: string, options?: RequestInit) {
+  return fetch(buildProxyUrl(`${API_BASE}${path}`), options);
+}
 
 interface PhimApiMovieItem {
   _id?: string;
@@ -172,7 +180,7 @@ export class KkphimProvider implements IMovieProvider, IEpisodeProvider {
 
   async getDetail(slug: string, options?: { silent?: boolean }): Promise<FilmDetailResult | null> {
     try {
-      const res = await fetch(`${API_BASE}/phim/${slug}`, {
+      const res = await apiFetch(`/phim/${slug}`, {
         headers: API_HEADERS,
         next: { revalidate: 3600 },
       });
@@ -205,7 +213,7 @@ export class KkphimProvider implements IMovieProvider, IEpisodeProvider {
 
   async getPhimMoi(page: number = 1): Promise<PhimResponse | null> {
     try {
-      const res = await fetch(`${API_BASE}/danh-sach/phim-moi-cap-nhat?page=${page}`, {
+      const res = await apiFetch(`/danh-sach/phim-moi-cap-nhat?page=${page}`, {
         headers: API_HEADERS,
         next: { revalidate: 3600 },
       });
@@ -250,7 +258,7 @@ export class KkphimProvider implements IMovieProvider, IEpisodeProvider {
       if (page > 1) params.set("page", String(page));
       if (limit) params.set("limit", String(limit));
 
-      const res = await fetch(`${API_BASE}/v1/api/tim-kiem?${params.toString()}`, {
+      const res = await apiFetch(`/v1/api/tim-kiem?${params.toString()}`, {
         headers: API_HEADERS,
         cache: "no-store",
       });

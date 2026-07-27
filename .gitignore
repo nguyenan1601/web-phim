@@ -40,3 +40,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# agent skills (synced by ags - do not commit)
+.agents/
+.cursor/
+.codex/
+.roo/
+.kiro/
+.skillsrc

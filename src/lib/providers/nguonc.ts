@@ -8,6 +8,7 @@ import type {
   PhimItem,
   PhimResponse,
 } from "./types";
+import { buildProxyUrl } from "../proxy";
 
 /**
  * NguoncEpisodeProvider
@@ -220,11 +221,16 @@ function getEpisodes(json: NguoncDetailResponse) {
 
 function buildApiUrl(path: string, params?: URLSearchParams) {
   const upstreamUrl = `${API_BASE}${path}${params ? `?${params.toString()}` : ""}`;
-  if (!API_PROXY_URL) return upstreamUrl;
 
-  const proxyUrl = new URL(API_PROXY_URL);
-  proxyUrl.searchParams.set("url", upstreamUrl);
-  return proxyUrl.toString();
+  // Ưu tiên proxy URL riêng cho nguonc (backward compatible)
+  if (API_PROXY_URL) {
+    const proxyUrl = new URL(API_PROXY_URL);
+    proxyUrl.searchParams.set("url", upstreamUrl);
+    return proxyUrl.toString();
+  }
+
+  // Fallback sang proxy chung (USE_API_PROXY)
+  return buildProxyUrl(upstreamUrl);
 }
 
 async function fetchDetail(slug: string) {
